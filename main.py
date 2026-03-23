@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import ttk
 from PIL import Image, ImageTk
 import json
 import math
@@ -76,12 +75,6 @@ class AHU:
 
         component = self.components.pop(from_index)
         self.components.insert(to_index, component)
-
-    def summary(self):
-        lines = []
-        for i, c in enumerate(self.components):
-            lines.append(f"{i+1}. {c.name} ({c.size}) - {c.length} in")
-        return "\n".join(lines)
 
     def size_from_cfm(self):
         if self.cfm == 0:
@@ -349,7 +342,6 @@ class AHUGUI:
         self.dragged_image = None
         self.drag_start_index = None
         self.drag_target_index = None
-        self.ghost_label = None
         self.visual_drag_indicator = None
 
     def update_cfm(self):
@@ -501,36 +493,6 @@ class AHUGUI:
 
         return self._icon_cache[path]
 
-    def create_dropdown_menu(self, title, item_list):
-        frame = tk.Frame(self.component_frame, bg="white")
-        frame.pack(fill="x", padx=4, pady=4)
-
-        accordion = ttk.LabelFrame(frame, text=title)
-        accordion.pack(fill="both", expand=True)
-
-        # Container for image buttons
-        inner = tk.Frame(accordion)
-        inner.pack(fill="both", expand=True)
-
-        for label, comp_name, img_file in item_list:
-
-            try:
-                img = Image.open(img_file).resize((80, 80))
-                img = ImageTk.PhotoImage(img)
-            except:
-                img = None
-
-            btn = tk.Button(
-                inner,
-                text=label,
-                image=img,
-                compound="top",
-                command=lambda c=comp_name: self.handle_add_component(c),
-            )
-
-            btn.image = img
-            btn.pack(side="left", padx=5, pady=5)
-
     def build_right_panel(self):
         self.right_frame = tk.Frame(self.root, bg="#F0F0F0")
         self.right_frame.pack(side="right", fill="both", expand=True)
@@ -611,18 +573,6 @@ class AHUGUI:
         self.dragged_image = lbl
         self.drag_start_index = lbl.drag_index
 
-        #Ghost image
-        #self.ghost_label = tk.Label(
-            #self.visual_frame,
-            #image=lbl.image,
-            #bd=2,
-            #bg="#dddddd"
-        #)
-        #self.ghost_label.place(
-            #x=lbl.winfo_x(),
-            #y=lbl.winfo_y()
-        #)
-
         # Initialize drag indicator
         self.visual_drag_indicator = tk.Frame(
             self.visual_frame,
@@ -632,13 +582,6 @@ class AHUGUI:
         )
 
     def _on_image_drag(self, event):
-        #if not self.ghost_label or not self.visual_drag_indicator or not self.dragged_image:
-            #return
-
-        # Move ghost with cursor
-        #x = event.x_root - self.visual_frame.winfo_rootx()
-        #self.ghost_label.place(x=x - 40, y=5)
-
         # Mouse X relative to visual_frame
         mouse_x = event.x_root - self.visual_frame.winfo_rootx()
 
@@ -658,9 +601,6 @@ class AHUGUI:
             self.visual_drag_indicator.place(x=slots[nearest_index] + 13, y=102)
 
     def _end_image_drag(self, event):
-        if self.ghost_label:
-            self.ghost_label.destroy()
-
         if (
             self.drag_start_index is not None
             and self.drag_target_index is not None
@@ -676,7 +616,6 @@ class AHUGUI:
         self.dragged_image = None
         self.drag_start_index = None
         self.drag_target_index = None
-        self.ghost_label = None
 
 
     def build_bottom_area(self):
@@ -789,10 +728,6 @@ def run_gui(json_path="ahu_components.json"):
     root.mainloop()
 
 
-
-
-#ahu.add_component("Economizer_Outdoor","200")
-#ahu.add_component("Sprayed_Coil","200")
 
 
 if __name__ == "__main__":
