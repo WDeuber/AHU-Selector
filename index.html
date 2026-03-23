@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AHU Builder</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #error-banner {
+      display: none;
+      background: #ffe0e0;
+      border-bottom: 2px solid #c00;
+      padding: 10px 20px;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    #error-banner code {
+      background: #fff;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+
+    #app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left Panel ─────────────────────────────────────────── */
+    #left-panel {
+      width: 500px;
+      min-width: 500px;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-right: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    #input-row {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: #F5F5F5;
+      border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+    }
+
+    .input-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .input-group label {
+      font-size: 12px;
+      text-align: center;
+      color: #333;
+    }
+
+    .input-group input {
+      width: 100%;
+      max-width: 160px;
+      text-align: center;
+      padding: 5px 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    #dropdowns-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 8px;
+    }
+
+    /* ── Dropdown Sections ──────────────────────────────────── */
+    details.dropdown-section {
+      background: #F5F5F5;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      margin-bottom: 6px;
+    }
+
+    details.dropdown-section summary {
+      padding: 8px 10px;
+      background: #D0D0D0;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      user-select: none;
+      list-style: none;
+      border-radius: 2px;
+    }
+    details.dropdown-section summary::-webkit-details-marker { display: none; }
+    details.dropdown-section summary::after { content: " ▼"; }
+    details.dropdown-section[open] summary::after { content: " ▲"; }
+
+    .dropdown-content {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      padding: 8px;
+    }
+
+    .component-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 4px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.3;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .component-btn:hover { background: #e8f0fe; border-color: #4a90e2; }
+    .component-btn img { width: 70px; height: 70px; object-fit: contain; }
+
+    /* ── Right Panel ────────────────────────────────────────── */
+    #right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #F0F0F0;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* ── Visual Frame ───────────────────────────────────────── */
+    #visual-frame {
+      flex: 1;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    #visual-frame h2 {
+      font-size: 15px;
+      padding: 7px 12px;
+      flex-shrink: 0;
+    }
+
+    #image-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      padding: 10px;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    #image-container-empty {
+      color: #aaa;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .visual-component {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      cursor: grab;
+      flex-shrink: 0;
+      min-width: 110px;
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.4;
+      user-select: none;
+      transition: opacity 0.15s, border-color 0.1s;
+      position: relative;
+    }
+    .visual-component:active { cursor: grabbing; }
+    .visual-component.dragging { opacity: 0.35; }
+    .visual-component.drag-over-left  { border-left:  3px solid #4a90e2; }
+    .visual-component.drag-over-right { border-right: 3px solid #4a90e2; }
+    .visual-component img { width: 90px; height: 90px; object-fit: contain; }
+
+    /* ── Bottom Frame ───────────────────────────────────────── */
+    #bottom-frame {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── List Frame ─────────────────────────────────────────── */
+    #list-frame {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #E8E8E8;
+      border-right: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    #list-frame h2 {
+      font-size: 14px;
+      font-weight: bold;
+      padding: 6px 12px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    #component-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 6px;
+    }
+
+    .component-row {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      height: 36px;
+      background: white;
+      border-radius: 3px;
+      margin-bottom: 3px;
+      cursor: grab;
+      user-select: none;
+      border: 1px solid transparent;
+      transition: background 0.12s;
+    }
+    .component-row:active { cursor: grabbing; }
+    .component-row:hover { background: #CCE0FF; }
+
+    .component-row.dragging { opacity: 0.35; }
+    .component-row.drag-over-top    { border-top:    2px solid #4a90e2; }
+    .component-row.drag-over-bottom { border-bottom: 2px solid #4a90e2; }
+
+    .row-label {
+      flex: 1;
+      font-size: 13px;
+    }
+
+    .delete-btn {
+      display: none;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 0 2px;
+      color: #555;
+      line-height: 1;
+    }
+    .component-row:hover .delete-btn { display: block; }
+    .delete-btn:hover { color: #c00; }
+
+    /* ── Summary Frame ──────────────────────────────────────── */
+    #summary-frame {
+      flex: 1;
+      background: #DADADA;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #summary-frame h2 {
+      font-size: 14px;
+      font-weight: bold;
+      padding: 6px 12px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .summary-field {
+      font-size: 13px;
+      padding: 4px 14px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+
+<div id="error-banner">
+  <strong>Could not load component data.</strong>
+  This page must be served from a local web server (not opened directly as a file).<br>
+  Run: <code>python -m http.server</code> in this folder, then open <code>http://localhost:8000</code>
+</div>
+
+<div id="app">
+
+  <!-- ── Left Panel ────────────────────────────────────────── -->
+  <div id="left-panel">
+    <div id="input-row">
+      <div class="input-group">
+        <label for="cfm-entry">Airflow CFM:</label>
+        <input type="number" id="cfm-entry" min="0" placeholder="0">
+      </div>
+      <div class="input-group">
+        <label for="esp-entry">External Static Pressure (in. w.g.)</label>
+        <input type="number" id="esp-entry" min="0" step="0.01" placeholder="0">
+      </div>
+    </div>
+    <div id="dropdowns-wrapper">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- ── Right Panel ───────────────────────────────────────── -->
+  <div id="right-panel">
+
+    <!-- Visual layout -->
+    <div id="visual-frame">
+      <h2>AHU Layout</h2>
+      <div id="image-container"
+           ondragover="onContainerDragOver(event)"
+           ondrop="onContainerDrop(event)">
+        <span id="image-container-empty">Add components from the left panel to begin.</span>
+      </div>
+    </div>
+
+    <!-- Bottom: list + summary -->
+    <div id="bottom-frame">
+      <div id="list-frame">
+        <h2>Components Included</h2>
+        <div id="component-list"
+             ondragover="onListDragOver(event)"
+             ondrop="onListDrop(event)"
+             ondragleave="onListDragLeave(event)">
+        </div>
+      </div>
+
+      <div id="summary-frame">
+        <h2>AHU Summary</h2>
+        <div class="summary-field" id="sum-model-size">Model Size: -</div>
+        <div class="summary-field" id="sum-cfm">CFM: -</div>
+        <div class="summary-field" id="sum-tsp">TSP: -</div>
+        <div class="summary-field" id="sum-dimensions">Overall Dimensions: -</div>
+        <div class="summary-field" id="sum-weight">Total Weight: -</div>
+        <div class="summary-field" id="sum-bhp">BHP: -</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────────
+const AHU_INCREMENTS = [45, 60, 85, 105, 125, 155, 180, 200, 240, 300, 350, 400, 450, 500];
+
+const CATEGORIES = [
+  { name: "Fans", items: [
+    { label: "Centrifugal Fan (90TH-270BH)", key: "Centrifugal Fan_90TH_270BH", img: "images/Centrifugal_Fan_90TH_270BH.png" },
+    { label: "Centrifugal Fan (360UB-180DB)", key: "Centrifugal Fan_360UB_180DB", img: "images/Centrifugal_Fan_360UB_180DB.png" },
+    { label: "Plenum Fan",                   key: "Plenum_Fan",                  img: "images/Plenum_Fan.png" }
+  ]},
+  { name: "Coils", items: [
+    { label: "Heat Coil",         key: "Heat_Coil",        img: "images/Heat_Coil.png" },
+    { label: "Integrated FBP HC", key: "Integ_FBP_HC",     img: "images/Integ_FPB_HC.png" },
+    { label: "Conv FBP HC",       key: "Conv_FBP_HC",      img: "images/Conv_FBP_HC.png" },
+    { label: "Cooling Coil",      key: "Cool_Coil",        img: "images/Cool_Coil.png" },
+    { label: "Conv FBP CC",       key: "Conv_FBP_CC",      img: "images/Conv_FBP_CC.png" },
+    { label: "Steam Humidifier",  key: "Steam_Humidifier", img: "images/Steam_Humidifier.png" },
+    { label: "Sprayed Coil",      key: "Sprayed_Coil",     img: "images/Sprayed_Coil.png" }
+  ]},
+  { name: "Filters", items: [
+    { label: "Eliminator",              key: "Elim",                 img: "images/Elim.png" },
+    { label: "Flat Filter",             key: "Flat_Filter",          img: "images/Flat_Filter.png" },
+    { label: "Angle Filter",            key: "Angle_Filter",         img: "images/Angle_Filter.png" },
+    { label: "Hi-Eff Filter (12 rigid)",key: "Hi_Eff_Filter_12rigid",img: "images/Hi_Eff_Filter.png" },
+    { label: "Hi-Eff Filter (22 bag)",  key: "Hi_Eff_Filter_22bag",  img: "images/Hi_Eff_Filter.png" },
+    { label: "Hi-Eff Filter (28 bag)",  key: "Hi_Eff_Filter_28bag",  img: "images/Hi_Eff_Filter.png" },
+    { label: "Hi-Eff Filter (32 bag)",  key: "Hi_Eff_Filter_32bag",  img: "images/Hi_Eff_Filter.png" },
+    { label: "Roll Filter",             key: "Roll_Filter",          img: "images/Roll_Filter.png" }
+  ]},
+  { name: "Damper / Sound Trap", items: [
+    { label: "Face Damper",     key: "Face_Damper",     img: "images/Face_Damper.png" },
+    { label: "Louver w/ Screen",key: "Louver_w_Screen", img: "images/Louver_w_Screen.png" },
+    { label: "Sound Trap",      key: "Sound_Trap",      img: "images/Sound_Trap.png" }
+  ]},
+  { name: "Plenum", items: [
+    { label: "Plenum",            key: "Plenum",            img: "images/Plenum.png" },
+    { label: "Plenum w/Door",     key: "Plenum_w_Door",     img: "images/Plenum_w_Door.png" },
+    { label: "Blender",           key: "Blender",           img: "images/Blender.png" },
+    { label: "Mixing Box Door",   key: "Mixing_Box_Door",   img: "images/Mixing_Box_Door.png" },
+    { label: "Discharge Plenum",  key: "Discharge_Plenum",  img: "images/Discharge_Plenum.png" },
+    { label: "Diffuser Plenum",   key: "Diffuser_Plenum",   img: "images/Diffuser_Plenum.png" }
+  ]},
+  { name: "Economizer", items: [
+    { label: "Economizer Indoor",  key: "Economizer_Indoor",  img: "images/Economizer_Indoor.png" },
+    { label: "Economizer Outdoor", key: "Economizer_Outdoor", img: "images/Economizer_Outdoor.png" }
+  ]}
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let componentsData = null;  // loaded from JSON
+let ahuComponents  = [];    // [{name, size, label, data}]
+let cfm = 0;
+let esp = 0;
+
+// ── AHU Calculations ──────────────────────────────────────────────────────────
+function sizeFromCFM(cfmVal) {
+  if (cfmVal <= 0) return null;
+  const req = Math.ceil(cfmVal / 100);
+  for (const s of AHU_INCREMENTS) {
+    if (s >= req) return String(s);
+  }
+  return null;
+}
+
+function getModelSize()  { return sizeFromCFM(cfm); }
+function getAHUWeight()  { return ahuComponents.reduce((s, c) => s + c.data.weight, 0); }
+function getISP()        { return ahuComponents.reduce((s, c) => s + c.data.isp, 0); }
+function getTSP()        { return esp + getISP(); }
+function getBHP()        { return (getTSP() * cfm) / (6356 * 0.65); }
+
+function getAHUDimensions() {
+  if (!ahuComponents.length) return { length: 0, width: 0, height: 0 };
+  return {
+    length: ahuComponents.reduce((s, c) => s + c.data.dimensions.length, 0),
+    width:  Math.max(...ahuComponents.map(c => c.data.dimensions.width)),
+    height: Math.max(...ahuComponents.map(c => c.data.dimensions.height))
+  };
+}
+
+// ── Component Management ──────────────────────────────────────────────────────
+function addComponent(key) {
+  const size = getModelSize();
+  if (!size) {
+    alert("Please enter a valid CFM value before adding components.");
+    return;
+  }
+  const entry = componentsData[key];
+  if (!entry || !entry[size]) {
+    alert(`Size ${size} is not available for this component.`);
+    return;
+  }
+  ahuComponents.push({ name: key, size, label: entry.label, data: entry[size] });
+  updateDisplay();
+}
+
+function removeComponent(index) {
+  ahuComponents.splice(index, 1);
+  updateDisplay();
+}
+
+function moveComponent(fromIndex, toIndex) {
+  if (fromIndex === toIndex) return;
+  if (fromIndex < toIndex) toIndex -= 1;
+  const [comp] = ahuComponents.splice(fromIndex, 1);
+  ahuComponents.splice(toIndex, 0, comp);
+}
+
+// ── Display ───────────────────────────────────────────────────────────────────
+function updateDisplay() {
+  updateVisualArea();
+  updateComponentList();
+  updateSummary();
+}
+
+function updateVisualArea() {
+  const container = document.getElementById('image-container');
+  const empty     = document.getElementById('image-container-empty');
+
+  container.querySelectorAll('.visual-component').forEach(el => el.remove());
+
+  if (!ahuComponents.length) {
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  ahuComponents.forEach((comp, index) => {
+    const div = document.createElement('div');
+    div.className = 'visual-component';
+    div.draggable = true;
+    div.dataset.index = index;
+
+    const img = document.createElement('img');
+    img.src = comp.data.image;
+    img.alt = comp.label;
+    img.onerror = () => { img.style.visibility = 'hidden'; };
+
+    const lbl = document.createElement('span');
+    lbl.textContent = `${comp.label}\nSize ${comp.size}`;
+    lbl.style.whiteSpace = 'pre-line';
+
+    div.appendChild(img);
+    div.appendChild(lbl);
+
+    div.addEventListener('dragstart',  onVisualDragStart);
+    div.addEventListener('dragend',    onVisualDragEnd);
+    div.addEventListener('dragover',   onVisualItemDragOver);
+    div.addEventListener('dragleave',  onVisualItemDragLeave);
+    div.addEventListener('drop',       onVisualItemDrop);
+
+    container.appendChild(div);
+  });
+}
+
+function updateComponentList() {
+  const list = document.getElementById('component-list');
+  list.innerHTML = '';
+
+  ahuComponents.forEach((comp, index) => {
+    const row = document.createElement('div');
+    row.className = 'component-row';
+    row.draggable = true;
+    row.dataset.index = index;
+
+    const lbl = document.createElement('span');
+    lbl.className = 'row-label';
+    lbl.textContent = comp.label;
+
+    const del = document.createElement('span');
+    del.className = 'delete-btn';
+    del.textContent = '🗑';
+    del.title = 'Remove';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      removeComponent(index);
+    });
+
+    row.appendChild(lbl);
+    row.appendChild(del);
+
+    row.addEventListener('dragstart', onListDragStart);
+    row.addEventListener('dragend',   onListDragEnd);
+
+    list.appendChild(row);
+  });
+}
+
+function updateSummary() {
+  const size = getModelSize();
+  const dims = getAHUDimensions();
+  const hasComps = ahuComponents.length > 0;
+
+  document.getElementById('sum-model-size').textContent =
+    `Model Size: ${size ?? '-'}`;
+  document.getElementById('sum-cfm').textContent =
+    `CFM: ${cfm ? cfm.toLocaleString() : '-'}`;
+  document.getElementById('sum-tsp').textContent =
+    hasComps ? `TSP: ${getTSP().toFixed(2)} in.w.g.` : 'TSP: -';
+  document.getElementById('sum-dimensions').textContent =
+    hasComps
+      ? `Overall Dimensions: ${dims.length}" L × ${dims.width}" W × ${dims.height}" H`
+      : 'Overall Dimensions: -';
+  document.getElementById('sum-weight').textContent =
+    hasComps ? `Total Weight: ${getAHUWeight().toLocaleString()} lb` : 'Total Weight: -';
+  document.getElementById('sum-bhp').textContent =
+    (hasComps && cfm) ? `BHP: ${getBHP().toFixed(3)}` : 'BHP: -';
+}
+
+// ── Visual Drag & Drop ────────────────────────────────────────────────────────
+let visualDragSrcIndex = null;
+
+function clearVisualIndicators() {
+  document.querySelectorAll('.visual-component').forEach(el =>
+    el.classList.remove('drag-over-left', 'drag-over-right')
+  );
+}
+
+function onVisualDragStart(e) {
+  visualDragSrcIndex = parseInt(e.currentTarget.dataset.index);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', 'visual');
+}
+
+function onVisualDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  clearVisualIndicators();
+  visualDragSrcIndex = null;
+}
+
+function onVisualItemDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+
+  clearVisualIndicators();
+  const target = e.currentTarget;
+  const rect = target.getBoundingClientRect();
+  if (e.clientX < rect.left + rect.width / 2) {
+    target.classList.add('drag-over-left');
+  } else {
+    target.classList.add('drag-over-right');
+  }
+}
+
+function onVisualItemDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over-left', 'drag-over-right');
+}
+
+function onVisualItemDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const target      = e.currentTarget;
+  const targetIndex = parseInt(target.dataset.index);
+  const rect        = target.getBoundingClientRect();
+  const dropIndex   = e.clientX < rect.left + rect.width / 2 ? targetIndex : targetIndex + 1;
+
+  clearVisualIndicators();
+
+  if (visualDragSrcIndex !== null && visualDragSrcIndex !== dropIndex) {
+    moveComponent(visualDragSrcIndex, dropIndex);
+    updateDisplay();
+  }
+  visualDragSrcIndex = null;
+}
+
+// Drop on empty space after last item → append to end
+function onContainerDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function onContainerDrop(e) {
+  e.preventDefault();
+  clearVisualIndicators();
+  if (visualDragSrcIndex !== null) {
+    moveComponent(visualDragSrcIndex, ahuComponents.length);
+    updateDisplay();
+  }
+  visualDragSrcIndex = null;
+}
+
+// ── List Drag & Drop ──────────────────────────────────────────────────────────
+let listDragSrcIndex = null;
+
+function clearListIndicators() {
+  document.querySelectorAll('.component-row').forEach(el =>
+    el.classList.remove('drag-over-top', 'drag-over-bottom')
+  );
+}
+
+function onListDragStart(e) {
+  listDragSrcIndex = parseInt(e.currentTarget.dataset.index);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', 'list');
+}
+
+function onListDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  clearListIndicators();
+  listDragSrcIndex = null;
+}
+
+function onListDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+
+  clearListIndicators();
+  const target = e.target.closest('.component-row');
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) {
+      target.classList.add('drag-over-top');
+    } else {
+      target.classList.add('drag-over-bottom');
+    }
+  }
+}
+
+function onListDragLeave(e) {
+  if (!document.getElementById('component-list').contains(e.relatedTarget)) {
+    clearListIndicators();
+  }
+}
+
+function onListDrop(e) {
+  e.preventDefault();
+  clearListIndicators();
+
+  if (listDragSrcIndex === null) return;
+
+  const target = e.target.closest('.component-row');
+  let dropIndex;
+
+  if (!target) {
+    dropIndex = ahuComponents.length;
+  } else {
+    const targetIndex = parseInt(target.dataset.index);
+    const rect        = target.getBoundingClientRect();
+    dropIndex = e.clientY < rect.top + rect.height / 2 ? targetIndex : targetIndex + 1;
+  }
+
+  if (listDragSrcIndex !== dropIndex) {
+    moveComponent(listDragSrcIndex, dropIndex);
+    updateDisplay();
+  }
+  listDragSrcIndex = null;
+}
+
+// ── Build Dropdowns ───────────────────────────────────────────────────────────
+function buildDropdowns() {
+  const wrapper = document.getElementById('dropdowns-wrapper');
+
+  CATEGORIES.forEach(cat => {
+    const details = document.createElement('details');
+    details.className = 'dropdown-section';
+
+    const summary = document.createElement('summary');
+    summary.textContent = cat.name;
+    details.appendChild(summary);
+
+    const content = document.createElement('div');
+    content.className = 'dropdown-content';
+
+    cat.items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = 'component-btn';
+      btn.onclick = () => addComponent(item.key);
+
+      const img = document.createElement('img');
+      img.src = item.img;
+      img.alt = item.label;
+
+      const lbl = document.createElement('span');
+      lbl.textContent = item.label;
+
+      btn.appendChild(img);
+      btn.appendChild(lbl);
+      content.appendChild(btn);
+    });
+
+    details.appendChild(content);
+    wrapper.appendChild(details);
+  });
+}
+
+// ── Input Handlers ────────────────────────────────────────────────────────────
+document.getElementById('cfm-entry').addEventListener('input', function () {
+  cfm = parseFloat(this.value) || 0;
+  updateSummary();
+});
+
+document.getElementById('esp-entry').addEventListener('input', function () {
+  esp = parseFloat(this.value) || 0;
+  updateSummary();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  buildDropdowns();
+
+  try {
+    const res = await fetch('ahu_components.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    componentsData = await res.json();
+  } catch (err) {
+    document.getElementById('error-banner').style.display = 'block';
+    console.error('Failed to load ahu_components.json:', err);
+    return;
+  }
+
+  updateDisplay();
+}
+
+init();
+</script>
+</body>
+</html>
