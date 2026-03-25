@@ -208,11 +208,51 @@
       color: #888;
     }
 
-    .modal-row {
+    /* ── Size checkbox table ────────────────────────────────── */
+    #m-sizes-table {
+      margin-top: 4px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .size-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 12px;
+      grid-template-columns: 20px 56px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-bottom: 1px solid #eee;
+    }
+    .size-row:last-child { border-bottom: none; }
+    .size-row:nth-child(even) { background: #fafafa; }
+
+    .size-row input[type="checkbox"] { cursor: pointer; }
+
+    .size-row .size-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .size-row input[type="number"] {
+      padding: 3px 6px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 12px;
+      width: 100%;
+    }
+    .size-row input[type="number"]:disabled {
+      background: #f0f0f0;
+      color: #bbb;
+      border-color: #e0e0e0;
+    }
+    .size-row input[type="number"]:focus { outline: none; border-color: #4a90e2; }
+
+    .size-dims {
+      font-size: 11px;
+      color: #888;
+      white-space: nowrap;
     }
 
     .modal-actions {
@@ -470,34 +510,21 @@
     </div>
 
     <div class="modal-field">
-      <label>Applies to Sizes *</label>
-      <input type="text" id="m-sizes" placeholder="e.g. 45,60,85 or leave blank for all">
-      <span class="hint">Comma-separated list of sizes, or leave blank to apply to all sizes.</span>
-    </div>
-
-    <div class="modal-field">
       <label>ISP (in. w.g.) *</label>
       <input type="number" id="m-isp" step="0.01" placeholder="0.00">
-    </div>
-
-    <div class="modal-row">
-      <div class="modal-field" style="margin-bottom:0">
-        <label>Length (in.) *</label>
-        <input type="number" id="m-length" min="0" placeholder="0">
-      </div>
-      <div class="modal-field" style="margin-bottom:0">
-        <label>Width (in.) *</label>
-        <input type="number" id="m-width" min="0" placeholder="0">
-      </div>
-      <div class="modal-field" style="margin-bottom:0">
-        <label>Height (in.) *</label>
-        <input type="number" id="m-height" min="0" placeholder="0">
-      </div>
     </div>
 
     <div class="modal-field">
       <label>Weight (lb) *</label>
       <input type="number" id="m-weight" min="0" placeholder="0">
+    </div>
+
+    <div class="modal-field">
+      <label>Sizes &amp; Lengths *</label>
+      <span class="hint">Check each size this component applies to and enter its length. Width and height are set automatically.</span>
+      <div id="m-sizes-table">
+        <!-- Rows injected by buildSizesTable() -->
+      </div>
     </div>
 
     <div class="modal-field">
@@ -520,6 +547,24 @@ const BASE_CATALOG = {"Centrifugal Fan_90TH_270BH":{"label":"Centrifugal Fan","4
 
 // ── Constants ─────────────────────────────────────────────────
 const AHU_INCREMENTS = [45, 60, 85, 105, 125, 155, 180, 200, 240, 300, 350, 400, 450, 500];
+
+// Width and height are identical across all components of the same size
+const SIZE_DIMENSIONS = {
+  '45':  {width: 58,  height: 47},
+  '60':  {width: 64,  height: 49},
+  '85':  {width: 70,  height: 57},
+  '105': {width: 82,  height: 59},
+  '125': {width: 88,  height: 62},
+  '155': {width: 106, height: 68},
+  '180': {width: 106, height: 76},
+  '200': {width: 106, height: 84},
+  '240': {width: 124, height: 86},
+  '300': {width: 130, height: 92},
+  '350': {width: 136, height: 100},
+  '400': {width: 136, height: 113},
+  '450': {width: 136, height: 132},
+  '500': {width: 136, height: 144},
+};
 const CUSTOM_STORAGE_KEY = 'ahu_custom_components';
 const PLACEHOLDER_IMG = 'images/placeholder.png';
 
@@ -594,10 +639,10 @@ function rebuildCatalog() {
   catalog = { ...BASE_CATALOG };
   for (const cc of customComponents) {
     const entry = { label: cc.label };
-    const targetSizes = cc.sizes.length ? cc.sizes : AHU_INCREMENTS.map(String);
-    for (const size of targetSizes) {
+    for (const { size, length } of cc.sizeEntries) {
+      const dims = SIZE_DIMENSIONS[size];
       entry[size] = {
-        dimensions: { length: cc.length, width: cc.width, height: cc.height },
+        dimensions: { length, width: dims.width, height: dims.height },
         weight: cc.weight,
         isp: cc.isp,
         image: cc.img || PLACEHOLDER_IMG
@@ -826,17 +871,56 @@ function buildCategoryDetails(name, items, isCustom) {
 // ── Custom Component Modal ────────────────────────────────────
 let pendingImageDataUrl = null;
 
+function buildSizesTable() {
+  const table = document.getElementById('m-sizes-table');
+  table.innerHTML = '';
+  for (const size of AHU_INCREMENTS) {
+    const s = String(size);
+    const dims = SIZE_DIMENSIONS[s];
+    const row = document.createElement('div');
+    row.className = 'size-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `sz-cb-${s}`;
+
+    const lbl = document.createElement('label');
+    lbl.htmlFor = `sz-cb-${s}`;
+    lbl.className = 'size-label';
+    lbl.textContent = `${s}`;
+
+    const lengthInput = document.createElement('input');
+    lengthInput.type = 'number';
+    lengthInput.min = '0';
+    lengthInput.placeholder = 'Length (in.)';
+    lengthInput.id = `sz-len-${s}`;
+    lengthInput.disabled = true;
+
+    const dimSpan = document.createElement('span');
+    dimSpan.className = 'size-dims';
+    dimSpan.textContent = `${dims.width}"W \xD7 ${dims.height}"H`;
+
+    cb.addEventListener('change', () => {
+      lengthInput.disabled = !cb.checked;
+      if (cb.checked) lengthInput.focus();
+    });
+
+    row.appendChild(cb);
+    row.appendChild(lbl);
+    row.appendChild(lengthInput);
+    row.appendChild(dimSpan);
+    table.appendChild(row);
+  }
+}
+
 function openModal() {
   pendingImageDataUrl = null;
-  document.getElementById('m-name').value   = '';
-  document.getElementById('m-sizes').value  = '';
-  document.getElementById('m-isp').value    = '';
-  document.getElementById('m-length').value = '';
-  document.getElementById('m-width').value  = '';
-  document.getElementById('m-height').value = '';
+  document.getElementById('m-name').value  = '';
+  document.getElementById('m-isp').value   = '';
   document.getElementById('m-weight').value = '';
-  document.getElementById('m-image').value  = '';
+  document.getElementById('m-image').value = '';
   document.getElementById('modal-image-preview').src = PLACEHOLDER_IMG;
+  buildSizesTable();
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('m-name').focus();
 }
@@ -862,31 +946,30 @@ document.getElementById('m-image').addEventListener('change', function () {
 
 function saveCustomComponent() {
   const name   = document.getElementById('m-name').value.trim();
-  const sizesRaw = document.getElementById('m-sizes').value.trim();
   const isp    = parseFloat(document.getElementById('m-isp').value);
-  const length = parseFloat(document.getElementById('m-length').value);
-  const width  = parseFloat(document.getElementById('m-width').value);
-  const height = parseFloat(document.getElementById('m-height').value);
   const weight = parseFloat(document.getElementById('m-weight').value);
 
-  if (!name)                          { alert('Component name is required.'); return; }
-  if (isNaN(isp))                     { alert('ISP is required.'); return; }
-  if (isNaN(length) || isNaN(width) || isNaN(height)) { alert('All dimensions are required.'); return; }
-  if (isNaN(weight))                  { alert('Weight is required.'); return; }
+  if (!name)       { alert('Component name is required.'); return; }
+  if (isNaN(isp))  { alert('ISP is required.'); return; }
+  if (isNaN(weight)) { alert('Weight is required.'); return; }
 
-  // Parse sizes
-  let sizes = [];
-  if (sizesRaw) {
-    sizes = sizesRaw.split(',').map(s => s.trim()).filter(s => AHU_INCREMENTS.includes(Number(s)));
-    if (!sizes.length) { alert('No valid sizes found. Valid sizes: ' + AHU_INCREMENTS.join(', ')); return; }
+  // Collect checked sizes with their lengths
+  const sizeEntries = [];
+  for (const size of AHU_INCREMENTS) {
+    const s = String(size);
+    const cb = document.getElementById(`sz-cb-${s}`);
+    if (!cb.checked) continue;
+    const len = parseFloat(document.getElementById(`sz-len-${s}`).value);
+    if (isNaN(len) || len <= 0) { alert(`Please enter a valid length for size ${s}.`); return; }
+    sizeEntries.push({ size: s, length: len });
   }
+  if (!sizeEntries.length) { alert('Please select at least one size.'); return; }
 
-  // Build a unique key
   const key = 'custom_' + name.replace(/\s+/g, '_') + '_' + Date.now();
 
   customComponents.push({
     key, label: name, img: pendingImageDataUrl || null,
-    sizes, length, width, height, weight, isp
+    sizeEntries, weight, isp
   });
 
   saveCustomComponents();
