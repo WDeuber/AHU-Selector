@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AHU Builder</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left Panel ─────────────────────────────────────────── */
+    #left-panel {
+      width: 500px;
+      min-width: 500px;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-right: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    #input-row {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: #F5F5F5;
+      border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+    }
+
+    .input-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .input-group label {
+      font-size: 12px;
+      text-align: center;
+      color: #333;
+    }
+
+    .input-group input {
+      width: 100%;
+      max-width: 160px;
+      text-align: center;
+      padding: 5px 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    #dropdowns-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 8px;
+    }
+
+    /* ── Dropdown Sections ──────────────────────────────────── */
+    details.dropdown-section {
+      background: #F5F5F5;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      margin-bottom: 6px;
+    }
+
+    details.dropdown-section summary {
+      padding: 8px 10px;
+      background: #D0D0D0;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      user-select: none;
+      list-style: none;
+      border-radius: 2px;
+    }
+    details.dropdown-section summary::-webkit-details-marker { display: none; }
+    details.dropdown-section summary::after { content: " \25BC"; }
+    details.dropdown-section[open] summary::after { content: " \25B2"; }
+
+    .dropdown-content {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      padding: 8px;
+    }
+
+    .component-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 4px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.3;
+      transition: background 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .component-btn:hover { background: #e8f0fe; border-color: #4a90e2; }
+    .component-btn img { width: 70px; height: 70px; object-fit: contain; }
+
+    /* Delete button on custom component cards */
+    .component-btn .btn-delete {
+      display: none;
+      position: absolute;
+      top: 3px;
+      right: 4px;
+      font-size: 13px;
+      color: #c00;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 1;
+    }
+    .component-btn:hover .btn-delete { display: block; }
+
+    /* ── Add Custom Component Button ────────────────────────── */
+    #add-custom-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 8px;
+      margin-top: 2px;
+      background: #e8f4e8;
+      border: 1px dashed #5a9e5a;
+      border-radius: 4px;
+      color: #3a7a3a;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #add-custom-btn:hover { background: #d4edda; }
+
+    /* ── Modal ──────────────────────────────────────────────── */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+
+    #modal {
+      background: white;
+      border-radius: 6px;
+      padding: 24px;
+      width: 480px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+
+    #modal h3 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: #222;
+    }
+
+    .modal-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .modal-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+    }
+
+    .modal-field input {
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+    .modal-field input:focus { outline: none; border-color: #4a90e2; }
+
+    .modal-field .hint {
+      font-size: 11px;
+      color: #888;
+    }
+
+    /* ── Size checkbox table ────────────────────────────────── */
+    #m-sizes-table {
+      margin-top: 4px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .size-row {
+      display: grid;
+      grid-template-columns: 20px 56px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-bottom: 1px solid #eee;
+    }
+    .size-row:last-child { border-bottom: none; }
+    .size-row:nth-child(even) { background: #fafafa; }
+
+    .size-row input[type="checkbox"] { cursor: pointer; }
+
+    .size-row .size-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .size-row input[type="number"] {
+      padding: 3px 6px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 12px;
+      width: 100%;
+    }
+    .size-row input[type="number"]:disabled {
+      background: #f0f0f0;
+      color: #bbb;
+      border-color: #e0e0e0;
+    }
+    .size-row input[type="number"]:focus { outline: none; border-color: #4a90e2; }
+
+    .size-dims {
+      font-size: 11px;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .btn-cancel {
+      padding: 7px 16px;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-cancel:hover { background: #ddd; }
+
+    .btn-save {
+      padding: 7px 16px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .btn-save:hover { background: #357abd; }
+
+    #modal-image-preview {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      margin-top: 6px;
+    }
+
+    /* ── Right Panel ────────────────────────────────────────── */
+    #right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #F0F0F0;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* ── Visual Frame ───────────────────────────────────────── */
+    #visual-frame {
+      flex: 1;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    #visual-frame h2 {
+      font-size: 15px;
+      padding: 7px 12px;
+      flex-shrink: 0;
+    }
+
+    #image-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      padding: 10px;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    #image-container-empty {
+      color: #aaa;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .visual-component {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      cursor: grab;
+      flex-shrink: 0;
+      min-width: 110px;
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.4;
+      user-select: none;
+      transition: opacity 0.15s, border-color 0.1s;
+    }
+    .visual-component:active { cursor: grabbing; }
+    .visual-component.dragging { opacity: 0.35; }
+    .visual-component.drag-over-left  { border-left:  3px solid #4a90e2; }
+    .visual-component.drag-over-right { border-right: 3px solid #4a90e2; }
+    .visual-component img { width: 90px; height: 90px; object-fit: contain; }
+
+    /* ── Bottom Frame ───────────────────────────────────────── */
+    #bottom-frame {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── List Frame ─────────────────────────────────────────── */
+    #list-frame {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #E8E8E8;
+      border-right: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    #list-frame h2 {
+      font-size: 14px;
+      font-weight: bold;
+      padding: 6px 12px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    #component-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 6px;
+    }
+
+    .component-row {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      height: 36px;
+      background: white;
+      border-radius: 3px;
+      margin-bottom: 3px;
+      cursor: grab;
+      user-select: none;
+      border: 1px solid transparent;
+      transition: background 0.12s;
+    }
+    .component-row:active { cursor: grabbing; }
+    .component-row:hover { background: #CCE0FF; }
+    .component-row.dragging { opacity: 0.35; }
+    .component-row.drag-over-top    { border-top:    2px solid #4a90e2; }
+    .component-row.drag-over-bottom { border-bottom: 2px solid #4a90e2; }
+
+    .row-label { flex: 1; font-size: 13px; }
+
+    .delete-btn {
+      display: none;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 0 2px;
+      color: #555;
+      line-height: 1;
+    }
+    .component-row:hover .delete-btn { display: block; }
+    .delete-btn:hover { color: #c00; }
+
+    /* ── Summary Frame ──────────────────────────────────────── */
+    #summary-frame {
+      flex: 1;
+      background: #DADADA;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #summary-frame h2 {
+      font-size: 14px;
+      font-weight: bold;
+      padding: 6px 12px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .summary-field {
+      font-size: 13px;
+      padding: 4px 14px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Left Panel ────────────────────────────────────────── -->
+  <div id="left-panel">
+    <div id="input-row">
+      <div class="input-group">
+        <label for="cfm-entry">Airflow CFM:</label>
+        <input type="number" id="cfm-entry" min="0" placeholder="0">
+      </div>
+      <div class="input-group">
+        <label for="esp-entry">External Static Pressure (in. w.g.)</label>
+        <input type="number" id="esp-entry" min="0" step="0.01" placeholder="0">
+      </div>
+    </div>
+    <div id="dropdowns-wrapper">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- ── Right Panel ───────────────────────────────────────── -->
+  <div id="right-panel">
+    <div id="visual-frame">
+      <h2>AHU Layout</h2>
+      <div id="image-container"
+           ondragover="onContainerDragOver(event)"
+           ondrop="onContainerDrop(event)">
+        <span id="image-container-empty">Add components from the left panel to begin.</span>
+      </div>
+    </div>
+    <div id="bottom-frame">
+      <div id="list-frame">
+        <h2>Components Included</h2>
+        <div id="component-list"
+             ondragover="onListDragOver(event)"
+             ondrop="onListDrop(event)"
+             ondragleave="onListDragLeave(event)">
+        </div>
+      </div>
+      <div id="summary-frame">
+        <h2>AHU Summary</h2>
+        <div class="summary-field" id="sum-model-size">Model Size: -</div>
+        <div class="summary-field" id="sum-cfm">CFM: -</div>
+        <div class="summary-field" id="sum-tsp">TSP: -</div>
+        <div class="summary-field" id="sum-dimensions">Overall Dimensions: -</div>
+        <div class="summary-field" id="sum-weight">Total Weight: -</div>
+        <div class="summary-field" id="sum-bhp">BHP: -</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Custom Component Modal ────────────────────────────── -->
+<div id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div id="modal">
+    <h3>Add Custom Component</h3>
+
+    <div class="modal-field">
+      <label>Component Name *</label>
+      <input type="text" id="m-name" placeholder="e.g. My Custom Filter">
+    </div>
+
+    <div class="modal-field">
+      <label>ISP (in. w.g.) *</label>
+      <input type="number" id="m-isp" step="0.01" placeholder="0.00">
+    </div>
+
+    <div class="modal-field">
+      <label>Weight (lb) *</label>
+      <input type="number" id="m-weight" min="0" placeholder="0">
+    </div>
+
+    <div class="modal-field">
+      <label>Sizes &amp; Lengths *</label>
+      <span class="hint">Check each size this component applies to and enter its length. Width and height are set automatically.</span>
+      <div id="m-sizes-table">
+        <!-- Rows injected by buildSizesTable() -->
+      </div>
+    </div>
+
+    <div class="modal-field">
+      <label>Image (optional)</label>
+      <input type="file" id="m-image" accept="image/*">
+      <img id="modal-image-preview" src="images/placeholder.png" alt="Preview">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveCustomComponent()">Add Component</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Embedded catalog ──────────────────────────────────────────
+const BASE_CATALOG = {"Centrifugal Fan_90TH_270BH":{"label":"Centrifugal Fan","45":{"dimensions":{"length":36,"width":58,"height":47},"weight":1150,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"60":{"dimensions":{"length":42,"width":64,"height":49},"weight":1200,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"85":{"dimensions":{"length":48,"width":70,"height":57},"weight":1450,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"105":{"dimensions":{"length":54,"width":82,"height":59},"weight":1760,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"125":{"dimensions":{"length":54,"width":88,"height":62},"weight":1980,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"155":{"dimensions":{"length":60,"width":106,"height":68},"weight":2450,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"180":{"dimensions":{"length":66,"width":106,"height":76},"weight":2770,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"200":{"dimensions":{"length":72,"width":106,"height":84},"weight":3350,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"240":{"dimensions":{"length":72,"width":124,"height":86},"weight":4000,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"300":{"dimensions":{"length":78,"width":130,"height":92},"weight":4400,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"350":{"dimensions":{"length":84,"width":136,"height":100},"weight":5600,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"400":{"dimensions":{"length":90,"width":136,"height":113},"weight":6800,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"450":{"dimensions":{"length":114,"width":136,"height":132},"weight":8200,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3},"500":{"dimensions":{"length":114,"width":136,"height":144},"weight":9200,"image":"images/Centrifugal_Fan_90TH_270BH.png","isp":0.3}},"Centrifugal Fan_360UB_180DB":{"label":"Centrifugal Fan","45":{"dimensions":{"length":42,"width":58,"height":47},"weight":1200,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"60":{"dimensions":{"length":42,"width":64,"height":49},"weight":1200,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"85":{"dimensions":{"length":48,"width":70,"height":57},"weight":1450,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"105":{"dimensions":{"length":54,"width":82,"height":59},"weight":1760,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"125":{"dimensions":{"length":54,"width":88,"height":62},"weight":1980,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"155":{"dimensions":{"length":60,"width":106,"height":68},"weight":2450,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"180":{"dimensions":{"length":66,"width":106,"height":76},"weight":2770,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"200":{"dimensions":{"length":72,"width":106,"height":84},"weight":3350,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"240":{"dimensions":{"length":78,"width":124,"height":86},"weight":4200,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"300":{"dimensions":{"length":84,"width":130,"height":92},"weight":4600,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"350":{"dimensions":{"length":90,"width":136,"height":100},"weight":5800,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"400":{"dimensions":{"length":102,"width":136,"height":113},"weight":7000,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"450":{"dimensions":{"length":126,"width":136,"height":132},"weight":8800,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3},"500":{"dimensions":{"length":126,"width":136,"height":144},"weight":10000,"image":"images/Centrifugal_Fan_360UB_180DB.png","isp":0.3}},"Plenum_Fan":{"label":"Plenum Fan","45":{"dimensions":{"length":36,"width":58,"height":47},"weight":1050,"image":"images/Plenum_Fan.png","isp":0},"60":{"dimensions":{"length":42,"width":64,"height":49},"weight":1100,"image":"images/Plenum_Fan.png","isp":0},"85":{"dimensions":{"length":48,"width":70,"height":57},"weight":1300,"image":"images/Plenum_Fan.png","isp":0},"105":{"dimensions":{"length":54,"width":82,"height":59},"weight":1550,"image":"images/Plenum_Fan.png","isp":0},"125":{"dimensions":{"length":54,"width":88,"height":62},"weight":1780,"image":"images/Plenum_Fan.png","isp":0},"155":{"dimensions":{"length":60,"width":106,"height":68},"weight":2300,"image":"images/Plenum_Fan.png","isp":0},"180":{"dimensions":{"length":66,"width":106,"height":76},"weight":2600,"image":"images/Plenum_Fan.png","isp":0},"200":{"dimensions":{"length":72,"width":106,"height":84},"weight":3000,"image":"images/Plenum_Fan.png","isp":0},"240":{"dimensions":{"length":72,"width":124,"height":86},"weight":3800,"image":"images/Plenum_Fan.png","isp":0},"300":{"dimensions":{"length":78,"width":130,"height":92},"weight":4000,"image":"images/Plenum_Fan.png","isp":0},"350":{"dimensions":{"length":84,"width":136,"height":100},"weight":5100,"image":"images/Plenum_Fan.png","isp":0},"400":{"dimensions":{"length":90,"width":136,"height":113},"weight":6600,"image":"images/Plenum_Fan.png","isp":0},"450":{"dimensions":{"length":114,"width":136,"height":132},"weight":8000,"image":"images/Plenum_Fan.png","isp":0},"500":{"dimensions":{"length":114,"width":136,"height":144},"weight":9000,"image":"images/Plenum_Fan.png","isp":0}},"Plenum":{"label":"Plenum","45":{"dimensions":{"length":12,"width":58,"height":47},"weight":180,"image":"images/Plenum.png","isp":0},"60":{"dimensions":{"length":12,"width":64,"height":49},"weight":200,"image":"images/Plenum.png","isp":0},"85":{"dimensions":{"length":12,"width":70,"height":57},"weight":210,"image":"images/Plenum.png","isp":0},"105":{"dimensions":{"length":12,"width":82,"height":59},"weight":240,"image":"images/Plenum.png","isp":0},"125":{"dimensions":{"length":12,"width":88,"height":62},"weight":250,"image":"images/Plenum.png","isp":0},"155":{"dimensions":{"length":12,"width":106,"height":68},"weight":375,"image":"images/Plenum.png","isp":0},"180":{"dimensions":{"length":12,"width":106,"height":76},"weight":390,"image":"images/Plenum.png","isp":0},"200":{"dimensions":{"length":12,"width":106,"height":84},"weight":420,"image":"images/Plenum.png","isp":0},"240":{"dimensions":{"length":12,"width":124,"height":86},"weight":440,"image":"images/Plenum.png","isp":0},"300":{"dimensions":{"length":12,"width":130,"height":92},"weight":500,"image":"images/Plenum.png","isp":0},"350":{"dimensions":{"length":12,"width":136,"height":100},"weight":520,"image":"images/Plenum.png","isp":0},"400":{"dimensions":{"length":12,"width":136,"height":113},"weight":540,"image":"images/Plenum.png","isp":0},"450":{"dimensions":{"length":12,"width":136,"height":132},"weight":600,"image":"images/Plenum.png","isp":0},"500":{"dimensions":{"length":12,"width":136,"height":144},"weight":700,"image":"images/Plenum.png","isp":0}},"Plenum_w_Door":{"label":"Plenum w/ Door","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":320,"image":"images/Plenum_w_Door.png","isp":0},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":340,"image":"images/Plenum_w_Door.png","isp":0},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":380,"image":"images/Plenum_w_Door.png","isp":0},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":430,"image":"images/Plenum_w_Door.png","isp":0},"125":{"dimensions":{"length":30,"width":88,"height":62},"weight":490,"image":"images/Plenum_w_Door.png","isp":0},"155":{"dimensions":{"length":30,"width":106,"height":68},"weight":640,"image":"images/Plenum_w_Door.png","isp":0},"180":{"dimensions":{"length":30,"width":106,"height":76},"weight":660,"image":"images/Plenum_w_Door.png","isp":0},"200":{"dimensions":{"length":30,"width":106,"height":84},"weight":700,"image":"images/Plenum_w_Door.png","isp":0},"240":{"dimensions":{"length":30,"width":124,"height":86},"weight":770,"image":"images/Plenum_w_Door.png","isp":0},"300":{"dimensions":{"length":30,"width":130,"height":92},"weight":900,"image":"images/Plenum_w_Door.png","isp":0},"350":{"dimensions":{"length":30,"width":136,"height":100},"weight":930,"image":"images/Plenum_w_Door.png","isp":0},"400":{"dimensions":{"length":30,"width":136,"height":113},"weight":950,"image":"images/Plenum_w_Door.png","isp":0},"450":{"dimensions":{"length":30,"width":136,"height":132},"weight":1100,"image":"images/Plenum_w_Door.png","isp":0},"500":{"dimensions":{"length":30,"width":136,"height":144},"weight":1200,"image":"images/Plenum_w_Door.png","isp":0}},"Heat_Coil":{"label":"Heat Coil","45":{"dimensions":{"length":6,"width":58,"height":47},"weight":125,"image":"images/Heat_Coil.png","isp":0.15},"60":{"dimensions":{"length":6,"width":64,"height":49},"weight":140,"image":"images/Heat_Coil.png","isp":0.15},"85":{"dimensions":{"length":6,"width":70,"height":57},"weight":160,"image":"images/Heat_Coil.png","isp":0.15},"105":{"dimensions":{"length":6,"width":82,"height":59},"weight":180,"image":"images/Heat_Coil.png","isp":0.15},"125":{"dimensions":{"length":6,"width":88,"height":62},"weight":195,"image":"images/Heat_Coil.png","isp":0.15},"155":{"dimensions":{"length":6,"width":106,"height":68},"weight":300,"image":"images/Heat_Coil.png","isp":0.15},"180":{"dimensions":{"length":6,"width":106,"height":76},"weight":310,"image":"images/Heat_Coil.png","isp":0.15},"200":{"dimensions":{"length":6,"width":106,"height":84},"weight":320,"image":"images/Heat_Coil.png","isp":0.15},"240":{"dimensions":{"length":6,"width":124,"height":86},"weight":350,"image":"images/Heat_Coil.png","isp":0.15},"300":{"dimensions":{"length":6,"width":130,"height":92},"weight":400,"image":"images/Heat_Coil.png","isp":0.15},"350":{"dimensions":{"length":6,"width":136,"height":100},"weight":420,"image":"images/Heat_Coil.png","isp":0.15},"400":{"dimensions":{"length":6,"width":136,"height":113},"weight":430,"image":"images/Heat_Coil.png","isp":0.15},"450":{"dimensions":{"length":6,"width":136,"height":132},"weight":500,"image":"images/Heat_Coil.png","isp":0.15},"500":{"dimensions":{"length":6,"width":136,"height":144},"weight":600,"image":"images/Heat_Coil.png","isp":0.15}},"Integ_FBP_HC":{"label":"Integ FBP HC","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":870,"image":"images/Integ_FPB_HC.png","isp":0.33},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":990,"image":"images/Integ_FPB_HC.png","isp":0.33},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":1130,"image":"images/Integ_FPB_HC.png","isp":0.33},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":1250,"image":"images/Integ_FPB_HC.png","isp":0.33},"125":{"dimensions":{"length":24,"width":88,"height":62},"weight":1300,"image":"images/Integ_FPB_HC.png","isp":0.33},"155":{"dimensions":{"length":24,"width":106,"height":68},"weight":1690,"image":"images/Integ_FPB_HC.png","isp":0.33},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":1780,"image":"images/Integ_FPB_HC.png","isp":0.33},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":1955,"image":"images/Integ_FPB_HC.png","isp":0.33},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":2320,"image":"images/Integ_FPB_HC.png","isp":0.33},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":2600,"image":"images/Integ_FPB_HC.png","isp":0.33},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":2830,"image":"images/Integ_FPB_HC.png","isp":0.33},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":3060,"image":"images/Integ_FPB_HC.png","isp":0.33},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":3500,"image":"images/Integ_FPB_HC.png","isp":0.33},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":3600,"image":"images/Integ_FPB_HC.png","isp":0.33}},"Conv_FBP_HC":{"label":"Conv FBP HC","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":550,"image":"images/Conv_FBP_HC.png","isp":0.1},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":580,"image":"images/Conv_FBP_HC.png","isp":0.1},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":650,"image":"images/Conv_FBP_HC.png","isp":0.1},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":750,"image":"images/Conv_FBP_HC.png","isp":0.1},"125":{"dimensions":{"length":24,"width":88,"height":62},"weight":810,"image":"images/Conv_FBP_HC.png","isp":0.1},"155":{"dimensions":{"length":24,"width":106,"height":68},"weight":1060,"image":"images/Conv_FBP_HC.png","isp":0.1},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":1120,"image":"images/Conv_FBP_HC.png","isp":0.1},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":1170,"image":"images/Conv_FBP_HC.png","isp":0.1},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":1330,"image":"images/Conv_FBP_HC.png","isp":0.1},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":1500,"image":"images/Conv_FBP_HC.png","isp":0.1},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":1560,"image":"images/Conv_FBP_HC.png","isp":0.1},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":1650,"image":"images/Conv_FBP_HC.png","isp":0.1},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":2000,"image":"images/Conv_FBP_HC.png","isp":0.1},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":2200,"image":"images/Conv_FBP_HC.png","isp":0.1}},"Cool_Coil":{"label":"Cool Coil","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":320,"image":"images/Cool_Coil.png","isp":0.15},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":340,"image":"images/Cool_Coil.png","isp":0.15},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":380,"image":"images/Cool_Coil.png","isp":0.15},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":430,"image":"images/Cool_Coil.png","isp":0.15},"125":{"dimensions":{"length":24,"width":88,"height":62},"weight":460,"image":"images/Cool_Coil.png","isp":0.15},"155":{"dimensions":{"length":24,"width":106,"height":68},"weight":620,"image":"images/Cool_Coil.png","isp":0.15},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":640,"image":"images/Cool_Coil.png","isp":0.15},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":660,"image":"images/Cool_Coil.png","isp":0.15},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":730,"image":"images/Cool_Coil.png","isp":0.15},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":800,"image":"images/Cool_Coil.png","isp":0.15},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":820,"image":"images/Cool_Coil.png","isp":0.15},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":840,"image":"images/Cool_Coil.png","isp":0.15},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":1000,"image":"images/Cool_Coil.png","isp":0.15},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":1150,"image":"images/Cool_Coil.png","isp":0.15}},"Conv_FBP_CC":{"label":"Conv FBP CC","45":{"dimensions":{"length":30,"width":58,"height":47},"weight":300,"image":"images/Conv_FBP_CC.png","isp":0.1},"60":{"dimensions":{"length":30,"width":64,"height":49},"weight":680,"image":"images/Conv_FBP_CC.png","isp":0.1},"85":{"dimensions":{"length":30,"width":70,"height":57},"weight":755,"image":"images/Conv_FBP_CC.png","isp":0.1},"105":{"dimensions":{"length":30,"width":82,"height":59},"weight":870,"image":"images/Conv_FBP_CC.png","isp":0.1},"125":{"dimensions":{"length":30,"width":88,"height":62},"weight":935,"image":"images/Conv_FBP_CC.png","isp":0.1},"155":{"dimensions":{"length":30,"width":106,"height":68},"weight":1240,"image":"images/Conv_FBP_CC.png","isp":0.1},"180":{"dimensions":{"length":30,"width":106,"height":76},"weight":1315,"image":"images/Conv_FBP_CC.png","isp":0.1},"200":{"dimensions":{"length":30,"width":106,"height":84},"weight":1380,"image":"images/Conv_FBP_CC.png","isp":0.1},"240":{"dimensions":{"length":30,"width":124,"height":86},"weight":1570,"image":"images/Conv_FBP_CC.png","isp":0.1},"300":{"dimensions":{"length":30,"width":130,"height":92},"weight":1770,"image":"images/Conv_FBP_CC.png","isp":0.1},"350":{"dimensions":{"length":30,"width":136,"height":100},"weight":1820,"image":"images/Conv_FBP_CC.png","isp":0.1},"400":{"dimensions":{"length":30,"width":136,"height":113},"weight":1920,"image":"images/Conv_FBP_CC.png","isp":0.1},"450":{"dimensions":{"length":30,"width":136,"height":132},"weight":2300,"image":"images/Conv_FBP_CC.png","isp":0.1},"500":{"dimensions":{"length":30,"width":136,"height":144},"weight":2550,"image":"images/Conv_FBP_CC.png","isp":0.1}},"Elim":{"label":"Elim","45":{"dimensions":{"length":12,"width":58,"height":47},"weight":360,"image":"images/Elim.png","isp":0.1},"60":{"dimensions":{"length":12,"width":64,"height":49},"weight":400,"image":"images/Elim.png","isp":0.1},"85":{"dimensions":{"length":12,"width":70,"height":57},"weight":490,"image":"images/Elim.png","isp":0.1},"105":{"dimensions":{"length":12,"width":82,"height":59},"weight":580,"image":"images/Elim.png","isp":0.1},"125":{"dimensions":{"length":12,"width":88,"height":62},"weight":640,"image":"images/Elim.png","isp":0.1},"155":{"dimensions":{"length":12,"width":106,"height":68},"weight":880,"image":"images/Elim.png","isp":0.1},"180":{"dimensions":{"length":12,"width":106,"height":76},"weight":950,"image":"images/Elim.png","isp":0.1},"200":{"dimensions":{"length":12,"width":106,"height":84},"weight":1020,"image":"images/Elim.png","isp":0.1},"240":{"dimensions":{"length":12,"width":124,"height":86},"weight":1070,"image":"images/Elim.png","isp":0.1},"300":{"dimensions":{"length":12,"width":130,"height":92},"weight":1400,"image":"images/Elim.png","isp":0.1},"350":{"dimensions":{"length":12,"width":136,"height":100},"weight":1460,"image":"images/Elim.png","isp":0.1},"400":{"dimensions":{"length":12,"width":136,"height":113},"weight":1600,"image":"images/Elim.png","isp":0.1},"450":{"dimensions":{"length":12,"width":136,"height":132},"weight":1900,"image":"images/Elim.png","isp":0.1},"500":{"dimensions":{"length":12,"width":136,"height":144},"weight":2100,"image":"images/Elim.png","isp":0.1}},"Steam_Humidifier":{"label":"Steam Humidifier","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":320,"image":"images/Steam_Humidifier.png","isp":0},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":340,"image":"images/Steam_Humidifier.png","isp":0},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":380,"image":"images/Steam_Humidifier.png","isp":0},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":430,"image":"images/Steam_Humidifier.png","isp":0},"125":{"dimensions":{"length":24,"width":88,"height":62},"weight":460,"image":"images/Steam_Humidifier.png","isp":0},"155":{"dimensions":{"length":24,"width":106,"height":68},"weight":620,"image":"images/Steam_Humidifier.png","isp":0},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":640,"image":"images/Steam_Humidifier.png","isp":0},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":660,"image":"images/Steam_Humidifier.png","isp":0},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":730,"image":"images/Steam_Humidifier.png","isp":0},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":800,"image":"images/Steam_Humidifier.png","isp":0},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":820,"image":"images/Steam_Humidifier.png","isp":0},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":840,"image":"images/Steam_Humidifier.png","isp":0},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":1000,"image":"images/Steam_Humidifier.png","isp":0},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":1150,"image":"images/Steam_Humidifier.png","isp":0}},"Flat_Filter":{"label":"Flat Filter","45":{"dimensions":{"length":6,"width":58,"height":47},"weight":150,"image":"images/Flat_Filter.png","isp":0.5},"60":{"dimensions":{"length":6,"width":64,"height":49},"weight":165,"image":"images/Flat_Filter.png","isp":0.5},"85":{"dimensions":{"length":6,"width":70,"height":57},"weight":180,"image":"images/Flat_Filter.png","isp":0.5},"105":{"dimensions":{"length":6,"width":82,"height":59},"weight":210,"image":"images/Flat_Filter.png","isp":0.5},"125":{"dimensions":{"length":6,"width":88,"height":62},"weight":220,"image":"images/Flat_Filter.png","isp":0.5},"155":{"dimensions":{"length":6,"width":106,"height":68},"weight":310,"image":"images/Flat_Filter.png","isp":0.5},"180":{"dimensions":{"length":6,"width":106,"height":76},"weight":350,"image":"images/Flat_Filter.png","isp":0.5},"200":{"dimensions":{"length":6,"width":106,"height":84},"weight":360,"image":"images/Flat_Filter.png","isp":0.5},"240":{"dimensions":{"length":6,"width":124,"height":86},"weight":410,"image":"images/Flat_Filter.png","isp":0.5},"300":{"dimensions":{"length":6,"width":130,"height":92},"weight":400,"image":"images/Flat_Filter.png","isp":0.5},"350":{"dimensions":{"length":6,"width":136,"height":100},"weight":480,"image":"images/Flat_Filter.png","isp":0.5},"400":{"dimensions":{"length":6,"width":136,"height":113},"weight":500,"image":"images/Flat_Filter.png","isp":0.5},"450":{"dimensions":{"length":6,"width":136,"height":132},"weight":600,"image":"images/Flat_Filter.png","isp":0.5},"500":{"dimensions":{"length":6,"width":136,"height":144},"weight":700,"image":"images/Flat_Filter.png","isp":0.5}},"Angle_Filter":{"label":"Angle Filter","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":350,"image":"images/Angle_Filter.png","isp":0.5},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":370,"image":"images/Angle_Filter.png","isp":0.5},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":405,"image":"images/Angle_Filter.png","isp":0.5},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":455,"image":"images/Angle_Filter.png","isp":0.5},"125":{"dimensions":{"length":24,"width":88,"height":62},"weight":485,"image":"images/Angle_Filter.png","isp":0.5},"155":{"dimensions":{"length":24,"width":106,"height":68},"weight":710,"image":"images/Angle_Filter.png","isp":0.5},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":730,"image":"images/Angle_Filter.png","isp":0.5},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":745,"image":"images/Angle_Filter.png","isp":0.5},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":850,"image":"images/Angle_Filter.png","isp":0.5},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":900,"image":"images/Angle_Filter.png","isp":0.5},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":980,"image":"images/Angle_Filter.png","isp":0.5},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":1030,"image":"images/Angle_Filter.png","isp":0.5},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":1150,"image":"images/Angle_Filter.png","isp":0.5},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":1300,"image":"images/Angle_Filter.png","isp":0.5}},"Hi_Eff_Filter_12rigid":{"label":"Hi Eff Filter (12-Rigid)","45":{"dimensions":{"length":18,"width":58,"height":47},"weight":300,"image":"images/Hi_Eff_Filter.png","isp":1},"60":{"dimensions":{"length":18,"width":64,"height":49},"weight":320,"image":"images/Hi_Eff_Filter.png","isp":1},"85":{"dimensions":{"length":18,"width":70,"height":57},"weight":370,"image":"images/Hi_Eff_Filter.png","isp":1},"105":{"dimensions":{"length":18,"width":82,"height":59},"weight":420,"image":"images/Hi_Eff_Filter.png","isp":1},"125":{"dimensions":{"length":18,"width":88,"height":62},"weight":440,"image":"images/Hi_Eff_Filter.png","isp":1},"155":{"dimensions":{"length":18,"width":106,"height":68},"weight":625,"image":"images/Hi_Eff_Filter.png","isp":1},"180":{"dimensions":{"length":18,"width":106,"height":76},"weight":700,"image":"images/Hi_Eff_Filter.png","isp":1},"200":{"dimensions":{"length":18,"width":106,"height":84},"weight":725,"image":"images/Hi_Eff_Filter.png","isp":1},"240":{"dimensions":{"length":18,"width":124,"height":86},"weight":830,"image":"images/Hi_Eff_Filter.png","isp":1},"300":{"dimensions":{"length":18,"width":130,"height":92},"weight":900,"image":"images/Hi_Eff_Filter.png","isp":1},"350":{"dimensions":{"length":18,"width":136,"height":100},"weight":925,"image":"images/Hi_Eff_Filter.png","isp":1},"400":{"dimensions":{"length":18,"width":136,"height":113},"weight":1020,"image":"images/Hi_Eff_Filter.png","isp":1},"450":{"dimensions":{"length":18,"width":136,"height":132},"weight":1200,"image":"images/Hi_Eff_Filter.png","isp":1},"500":{"dimensions":{"length":18,"width":136,"height":144},"weight":1400,"image":"images/Hi_Eff_Filter.png","isp":1}},"Hi_Eff_Filter_22bag":{"label":"Hi Eff Filter (22-Bag)","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":360,"image":"images/Hi_Eff_Filter.png","isp":1},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":385,"image":"images/Hi_Eff_Filter.png","isp":1},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":445,"image":"images/Hi_Eff_Filter.png","isp":1},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":520,"image":"images/Hi_Eff_Filter.png","isp":1},"125":{"dimensions":{"length":24,"width":88,"height":62},"weight":530,"image":"images/Hi_Eff_Filter.png","isp":1},"155":{"dimensions":{"length":24,"width":106,"height":68},"weight":750,"image":"images/Hi_Eff_Filter.png","isp":1},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":820,"image":"images/Hi_Eff_Filter.png","isp":1},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":845,"image":"images/Hi_Eff_Filter.png","isp":1},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":965,"image":"images/Hi_Eff_Filter.png","isp":1},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":1050,"image":"images/Hi_Eff_Filter.png","isp":1},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":1115,"image":"images/Hi_Eff_Filter.png","isp":1},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":1150,"image":"images/Hi_Eff_Filter.png","isp":1},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":1350,"image":"images/Hi_Eff_Filter.png","isp":1},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":1550,"image":"images/Hi_Eff_Filter.png","isp":1}},"Hi_Eff_Filter_28bag":{"label":"Hi Eff Filter (28-Bag)","45":{"dimensions":{"length":30,"width":58,"height":47},"weight":425,"image":"images/Hi_Eff_Filter.png","isp":1},"60":{"dimensions":{"length":30,"width":64,"height":49},"weight":450,"image":"images/Hi_Eff_Filter.png","isp":1},"85":{"dimensions":{"length":30,"width":70,"height":57},"weight":525,"image":"images/Hi_Eff_Filter.png","isp":1},"105":{"dimensions":{"length":30,"width":82,"height":59},"weight":620,"image":"images/Hi_Eff_Filter.png","isp":1},"125":{"dimensions":{"length":30,"width":88,"height":62},"weight":630,"image":"images/Hi_Eff_Filter.png","isp":1},"155":{"dimensions":{"length":30,"width":106,"height":68},"weight":880,"image":"images/Hi_Eff_Filter.png","isp":1},"180":{"dimensions":{"length":30,"width":106,"height":76},"weight":940,"image":"images/Hi_Eff_Filter.png","isp":1},"200":{"dimensions":{"length":30,"width":106,"height":84},"weight":960,"image":"images/Hi_Eff_Filter.png","isp":1},"240":{"dimensions":{"length":30,"width":124,"height":86},"weight":1100,"image":"images/Hi_Eff_Filter.png","isp":1},"300":{"dimensions":{"length":30,"width":130,"height":92},"weight":1200,"image":"images/Hi_Eff_Filter.png","isp":1},"350":{"dimensions":{"length":30,"width":136,"height":100},"weight":1255,"image":"images/Hi_Eff_Filter.png","isp":1},"400":{"dimensions":{"length":30,"width":136,"height":113},"weight":1280,"image":"images/Hi_Eff_Filter.png","isp":1},"450":{"dimensions":{"length":30,"width":136,"height":132},"weight":1500,"image":"images/Hi_Eff_Filter.png","isp":1},"500":{"dimensions":{"length":30,"width":136,"height":144},"weight":1700,"image":"images/Hi_Eff_Filter.png","isp":1}},"Hi_Eff_Filter_32bag":{"label":"Hi Eff Filter (32-Bag)","45":{"dimensions":{"length":36,"width":58,"height":47},"weight":480,"image":"images/Hi_Eff_Filter.png","isp":1},"60":{"dimensions":{"length":36,"width":64,"height":49},"weight":500,"image":"images/Hi_Eff_Filter.png","isp":1},"85":{"dimensions":{"length":36,"width":70,"height":57},"weight":580,"image":"images/Hi_Eff_Filter.png","isp":1},"105":{"dimensions":{"length":36,"width":82,"height":59},"weight":690,"image":"images/Hi_Eff_Filter.png","isp":1},"125":{"dimensions":{"length":36,"width":88,"height":62},"weight":750,"image":"images/Hi_Eff_Filter.png","isp":1},"155":{"dimensions":{"length":36,"width":106,"height":68},"weight":970,"image":"images/Hi_Eff_Filter.png","isp":1},"180":{"dimensions":{"length":36,"width":106,"height":76},"weight":1020,"image":"images/Hi_Eff_Filter.png","isp":1},"200":{"dimensions":{"length":36,"width":106,"height":84},"weight":1060,"image":"images/Hi_Eff_Filter.png","isp":1},"240":{"dimensions":{"length":36,"width":124,"height":86},"weight":1210,"image":"images/Hi_Eff_Filter.png","isp":1},"300":{"dimensions":{"length":36,"width":130,"height":92},"weight":1350,"image":"images/Hi_Eff_Filter.png","isp":1},"350":{"dimensions":{"length":36,"width":136,"height":100},"weight":1380,"image":"images/Hi_Eff_Filter.png","isp":1},"400":{"dimensions":{"length":36,"width":136,"height":113},"weight":1460,"image":"images/Hi_Eff_Filter.png","isp":1},"450":{"dimensions":{"length":36,"width":136,"height":132},"weight":1650,"image":"images/Hi_Eff_Filter.png","isp":1},"500":{"dimensions":{"length":36,"width":136,"height":144},"weight":1900,"image":"images/Hi_Eff_Filter.png","isp":1}},"Roll_Filter":{"label":"Roll Filter","45":{"dimensions":{"length":0,"width":58,"height":47},"weight":0,"image":"images/Roll_Filter.png","isp":0.5},"60":{"dimensions":{"length":0,"width":64,"height":49},"weight":0,"image":"images/Roll_Filter.png","isp":0.5},"85":{"dimensions":{"length":0,"width":70,"height":57},"weight":0,"image":"images/Roll_Filter.png","isp":0.5},"105":{"dimensions":{"length":0,"width":82,"height":59},"weight":0,"image":"images/Roll_Filter.png","isp":0.5},"125":{"dimensions":{"length":0,"width":88,"height":62},"weight":0,"image":"images/Roll_Filter.png","isp":0.5},"155":{"dimensions":{"length":0,"width":106,"height":68},"weight":0,"image":"images/Roll_Filter.png","isp":0.5},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":1075,"image":"images/Roll_Filter.png","isp":0.5},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":1125,"image":"images/Roll_Filter.png","isp":0.5},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":1250,"image":"images/Roll_Filter.png","isp":0.5},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":1280,"image":"images/Roll_Filter.png","isp":0.5},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":1410,"image":"images/Roll_Filter.png","isp":0.5},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":1500,"image":"images/Roll_Filter.png","isp":0.5},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":1650,"image":"images/Roll_Filter.png","isp":0.5},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":1800,"image":"images/Roll_Filter.png","isp":0.5}},"Blender":{"label":"Blender","45":{"dimensions":{"length":12,"width":58,"height":47},"weight":260,"image":"images/Blender.png","isp":0.15},"60":{"dimensions":{"length":12,"width":64,"height":49},"weight":325,"image":"images/Blender.png","isp":0.15},"85":{"dimensions":{"length":12,"width":70,"height":57},"weight":390,"image":"images/Blender.png","isp":0.15},"105":{"dimensions":{"length":12,"width":82,"height":59},"weight":490,"image":"images/Blender.png","isp":0.15},"125":{"dimensions":{"length":12,"width":88,"height":62},"weight":560,"image":"images/Blender.png","isp":0.15},"155":{"dimensions":{"length":12,"width":106,"height":68},"weight":625,"image":"images/Blender.png","isp":0.15},"180":{"dimensions":{"length":12,"width":106,"height":76},"weight":710,"image":"images/Blender.png","isp":0.15},"200":{"dimensions":{"length":12,"width":106,"height":84},"weight":800,"image":"images/Blender.png","isp":0.15},"240":{"dimensions":{"length":12,"width":124,"height":86},"weight":980,"image":"images/Blender.png","isp":0.15},"300":{"dimensions":{"length":12,"width":130,"height":92},"weight":1040,"image":"images/Blender.png","isp":0.15},"350":{"dimensions":{"length":12,"width":136,"height":100},"weight":1270,"image":"images/Blender.png","isp":0.15},"400":{"dimensions":{"length":12,"width":136,"height":113},"weight":1310,"image":"images/Blender.png","isp":0.15},"450":{"dimensions":{"length":12,"width":136,"height":132},"weight":1390,"image":"images/Blender.png","isp":0.15},"500":{"dimensions":{"length":12,"width":136,"height":144},"weight":1600,"image":"images/Blender.png","isp":0.15}},"Mixing_Box_Door":{"label":"Mixing Box w/ Door","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":380,"image":"images/Mixing_Box_Door.png","isp":0.05},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":420,"image":"images/Mixing_Box_Door.png","isp":0.05},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":470,"image":"images/Mixing_Box_Door.png","isp":0.05},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":550,"image":"images/Mixing_Box_Door.png","isp":0.05},"125":{"dimensions":{"length":30,"width":88,"height":62},"weight":690,"image":"images/Mixing_Box_Door.png","isp":0.05},"155":{"dimensions":{"length":30,"width":106,"height":68},"weight":925,"image":"images/Mixing_Box_Door.png","isp":0.05},"180":{"dimensions":{"length":30,"width":106,"height":76},"weight":960,"image":"images/Mixing_Box_Door.png","isp":0.05},"200":{"dimensions":{"length":30,"width":106,"height":84},"weight":1300,"image":"images/Mixing_Box_Door.png","isp":0.05},"240":{"dimensions":{"length":30,"width":124,"height":86},"weight":1560,"image":"images/Mixing_Box_Door.png","isp":0.05},"300":{"dimensions":{"length":36,"width":130,"height":92},"weight":1900,"image":"images/Mixing_Box_Door.png","isp":0.05},"350":{"dimensions":{"length":36,"width":136,"height":100},"weight":1960,"image":"images/Mixing_Box_Door.png","isp":0.05},"400":{"dimensions":{"length":48,"width":136,"height":113},"weight":2180,"image":"images/Mixing_Box_Door.png","isp":0.05},"450":{"dimensions":{"length":54,"width":136,"height":132},"weight":2300,"image":"images/Mixing_Box_Door.png","isp":0.05},"500":{"dimensions":{"length":54,"width":136,"height":144},"weight":2600,"image":"images/Mixing_Box_Door.png","isp":0.05}},"Face_Damper":{"label":"Face Damper","45":{"dimensions":{"length":12,"width":58,"height":47},"weight":280,"image":"images/Face_Damper.png","isp":0.04},"60":{"dimensions":{"length":12,"width":64,"height":49},"weight":310,"image":"images/Face_Damper.png","isp":0.04},"85":{"dimensions":{"length":12,"width":70,"height":57},"weight":360,"image":"images/Face_Damper.png","isp":0.04},"105":{"dimensions":{"length":12,"width":82,"height":59},"weight":420,"image":"images/Face_Damper.png","isp":0.04},"125":{"dimensions":{"length":12,"width":88,"height":62},"weight":460,"image":"images/Face_Damper.png","isp":0.04},"155":{"dimensions":{"length":12,"width":106,"height":68},"weight":650,"image":"images/Face_Damper.png","isp":0.04},"180":{"dimensions":{"length":12,"width":106,"height":76},"weight":685,"image":"images/Face_Damper.png","isp":0.04},"200":{"dimensions":{"length":12,"width":106,"height":84},"weight":720,"image":"images/Face_Damper.png","isp":0.04},"240":{"dimensions":{"length":12,"width":124,"height":86},"weight":840,"image":"images/Face_Damper.png","isp":0.04},"300":{"dimensions":{"length":12,"width":130,"height":92},"weight":910,"image":"images/Face_Damper.png","isp":0.04},"350":{"dimensions":{"length":12,"width":136,"height":100},"weight":1000,"image":"images/Face_Damper.png","isp":0.04},"400":{"dimensions":{"length":12,"width":136,"height":113},"weight":1070,"image":"images/Face_Damper.png","isp":0.04},"450":{"dimensions":{"length":12,"width":136,"height":132},"weight":1200,"image":"images/Face_Damper.png","isp":0.04},"500":{"dimensions":{"length":12,"width":136,"height":144},"weight":1400,"image":"images/Face_Damper.png","isp":0.04}},"Louver_w_Screen":{"label":"Louver w/ Screen","45":{"dimensions":{"length":6,"width":58,"height":47},"weight":275,"image":"images/Louver_w_Screen.png","isp":0.08},"60":{"dimensions":{"length":6,"width":64,"height":49},"weight":305,"image":"images/Louver_w_Screen.png","isp":0.08},"85":{"dimensions":{"length":6,"width":70,"height":57},"weight":350,"image":"images/Louver_w_Screen.png","isp":0.08},"105":{"dimensions":{"length":6,"width":82,"height":59},"weight":415,"image":"images/Louver_w_Screen.png","isp":0.08},"125":{"dimensions":{"length":6,"width":88,"height":62},"weight":450,"image":"images/Louver_w_Screen.png","isp":0.08},"155":{"dimensions":{"length":6,"width":106,"height":68},"weight":640,"image":"images/Louver_w_Screen.png","isp":0.08},"180":{"dimensions":{"length":6,"width":106,"height":76},"weight":665,"image":"images/Louver_w_Screen.png","isp":0.08},"200":{"dimensions":{"length":6,"width":106,"height":84},"weight":700,"image":"images/Louver_w_Screen.png","isp":0.08},"240":{"dimensions":{"length":6,"width":124,"height":86},"weight":820,"image":"images/Louver_w_Screen.png","isp":0.08},"300":{"dimensions":{"length":6,"width":130,"height":92},"weight":900,"image":"images/Louver_w_Screen.png","isp":0.08},"350":{"dimensions":{"length":6,"width":136,"height":100},"weight":980,"image":"images/Louver_w_Screen.png","isp":0.08},"400":{"dimensions":{"length":6,"width":136,"height":113},"weight":1050,"image":"images/Louver_w_Screen.png","isp":0.08},"450":{"dimensions":{"length":6,"width":136,"height":132},"weight":1180,"image":"images/Louver_w_Screen.png","isp":0.08},"500":{"dimensions":{"length":6,"width":136,"height":144},"weight":1375,"image":"images/Louver_w_Screen.png","isp":0.08}},"Sound_Trap":{"label":"Sound Trap","45":{"dimensions":{"length":36,"width":58,"height":47},"weight":650,"image":"images/Sound_Trap.png","isp":0.07},"60":{"dimensions":{"length":36,"width":64,"height":49},"weight":750,"image":"images/Sound_Trap.png","isp":0.07},"85":{"dimensions":{"length":36,"width":70,"height":57},"weight":900,"image":"images/Sound_Trap.png","isp":0.07},"105":{"dimensions":{"length":36,"width":82,"height":59},"weight":1010,"image":"images/Sound_Trap.png","isp":0.07},"125":{"dimensions":{"length":36,"width":88,"height":62},"weight":1200,"image":"images/Sound_Trap.png","isp":0.07},"155":{"dimensions":{"length":36,"width":106,"height":68},"weight":1600,"image":"images/Sound_Trap.png","isp":0.07},"180":{"dimensions":{"length":36,"width":106,"height":76},"weight":1760,"image":"images/Sound_Trap.png","isp":0.07},"200":{"dimensions":{"length":36,"width":106,"height":84},"weight":1870,"image":"images/Sound_Trap.png","isp":0.07},"240":{"dimensions":{"length":36,"width":124,"height":86},"weight":2220,"image":"images/Sound_Trap.png","isp":0.07},"300":{"dimensions":{"length":36,"width":130,"height":92},"weight":2430,"image":"images/Sound_Trap.png","isp":0.07},"350":{"dimensions":{"length":36,"width":136,"height":100},"weight":2670,"image":"images/Sound_Trap.png","isp":0.07},"400":{"dimensions":{"length":36,"width":136,"height":113},"weight":2880,"image":"images/Sound_Trap.png","isp":0.07},"450":{"dimensions":{"length":36,"width":136,"height":132},"weight":3000,"image":"images/Sound_Trap.png","isp":0.07},"500":{"dimensions":{"length":36,"width":136,"height":144},"weight":3300,"image":"images/Sound_Trap.png","isp":0.07}},"Aerofil_6":{"label":"Aerofil 6","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":340,"image":"images/Aerofil.png","isp":0.12},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":360,"image":"images/Aerofil.png","isp":0.12},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":400,"image":"images/Aerofil.png","isp":0.12},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":450,"image":"images/Aerofil.png","isp":0.12},"125":{"dimensions":{"length":24,"width":88,"height":62},"weight":480,"image":"images/Aerofil.png","isp":0.12},"155":{"dimensions":{"length":24,"width":106,"height":68},"weight":650,"image":"images/Aerofil.png","isp":0.12},"180":{"dimensions":{"length":24,"width":106,"height":76},"weight":680,"image":"images/Aerofil.png","isp":0.12},"200":{"dimensions":{"length":24,"width":106,"height":84},"weight":710,"image":"images/Aerofil.png","isp":0.12},"240":{"dimensions":{"length":24,"width":124,"height":86},"weight":825,"image":"images/Aerofil.png","isp":0.12},"300":{"dimensions":{"length":24,"width":130,"height":92},"weight":1000,"image":"images/Aerofil.png","isp":0.12},"350":{"dimensions":{"length":24,"width":136,"height":100},"weight":1200,"image":"images/Aerofil.png","isp":0.12},"400":{"dimensions":{"length":24,"width":136,"height":113},"weight":1400,"image":"images/Aerofil.png","isp":0.12},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":1600,"image":"images/Aerofil.png","isp":0.12},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":1800,"image":"images/Aerofil.png","isp":0.12}},"Aerofil_12":{"label":"Aerofil 12","45":{"dimensions":{"length":30,"width":58,"height":47},"weight":430,"image":"images/Aerofil.png","isp":0.18},"60":{"dimensions":{"length":30,"width":64,"height":49},"weight":460,"image":"images/Aerofil.png","isp":0.18},"85":{"dimensions":{"length":30,"width":70,"height":57},"weight":480,"image":"images/Aerofil.png","isp":0.18},"105":{"dimensions":{"length":30,"width":82,"height":59},"weight":540,"image":"images/Aerofil.png","isp":0.18},"125":{"dimensions":{"length":30,"width":88,"height":62},"weight":510,"image":"images/Aerofil.png","isp":0.18},"155":{"dimensions":{"length":30,"width":106,"height":68},"weight":700,"image":"images/Aerofil.png","isp":0.18},"180":{"dimensions":{"length":30,"width":106,"height":76},"weight":725,"image":"images/Aerofil.png","isp":0.18},"200":{"dimensions":{"length":30,"width":106,"height":84},"weight":800,"image":"images/Aerofil.png","isp":0.18},"240":{"dimensions":{"length":30,"width":124,"height":86},"weight":875,"image":"images/Aerofil.png","isp":0.18},"300":{"dimensions":{"length":30,"width":130,"height":92},"weight":1200,"image":"images/Aerofil.png","isp":0.18},"350":{"dimensions":{"length":30,"width":136,"height":100},"weight":1400,"image":"images/Aerofil.png","isp":0.18},"400":{"dimensions":{"length":30,"width":136,"height":113},"weight":1600,"image":"images/Aerofil.png","isp":0.18},"450":{"dimensions":{"length":30,"width":136,"height":132},"weight":1800,"image":"images/Aerofil.png","isp":0.18},"500":{"dimensions":{"length":30,"width":136,"height":144},"weight":2000,"image":"images/Aerofil.png","isp":0.18}},"Finfil":{"label":"Finfil","45":{"dimensions":{"length":48,"width":58,"height":47},"weight":500,"image":"images/Finfil.png","isp":0.18},"60":{"dimensions":{"length":48,"width":64,"height":49},"weight":600,"image":"images/Finfil.png","isp":0.18},"85":{"dimensions":{"length":48,"width":70,"height":57},"weight":600,"image":"images/Finfil.png","isp":0.18},"105":{"dimensions":{"length":48,"width":82,"height":59},"weight":800,"image":"images/Finfil.png","isp":0.18},"125":{"dimensions":{"length":48,"width":88,"height":62},"weight":1040,"image":"images/Finfil.png","isp":0.18},"155":{"dimensions":{"length":48,"width":106,"height":68},"weight":1300,"image":"images/Finfil.png","isp":0.18},"180":{"dimensions":{"length":48,"width":106,"height":76},"weight":1600,"image":"images/Finfil.png","isp":0.18},"200":{"dimensions":{"length":48,"width":106,"height":84},"weight":1920,"image":"images/Finfil.png","isp":0.18},"240":{"dimensions":{"length":48,"width":124,"height":86},"weight":2000,"image":"images/Finfil.png","isp":0.18},"300":{"dimensions":{"length":48,"width":130,"height":92},"weight":2300,"image":"images/Finfil.png","isp":0.18},"350":{"dimensions":{"length":48,"width":136,"height":100},"weight":2500,"image":"images/Finfil.png","isp":0.18},"400":{"dimensions":{"length":48,"width":136,"height":113},"weight":2600,"image":"images/Finfil.png","isp":0.18},"450":{"dimensions":{"length":48,"width":136,"height":132},"weight":2800,"image":"images/Finfil.png","isp":0.18},"500":{"dimensions":{"length":48,"width":136,"height":144},"weight":3000,"image":"images/Finfil.png","isp":0.18}},"Sprayed_Coil":{"label":"Sprayed Coil","45":{"dimensions":{"length":48,"width":58,"height":47},"weight":600,"image":"images/Sprayed_Coil.png","isp":1},"60":{"dimensions":{"length":48,"width":64,"height":49},"weight":700,"image":"images/Sprayed_Coil.png","isp":1},"85":{"dimensions":{"length":48,"width":70,"height":57},"weight":800,"image":"images/Sprayed_Coil.png","isp":1},"105":{"dimensions":{"length":48,"width":82,"height":59},"weight":1000,"image":"images/Sprayed_Coil.png","isp":1},"125":{"dimensions":{"length":48,"width":88,"height":62},"weight":1300,"image":"images/Sprayed_Coil.png","isp":1},"155":{"dimensions":{"length":48,"width":106,"height":68},"weight":1600,"image":"images/Sprayed_Coil.png","isp":1},"180":{"dimensions":{"length":48,"width":106,"height":76},"weight":1900,"image":"images/Sprayed_Coil.png","isp":1},"200":{"dimensions":{"length":48,"width":106,"height":84},"weight":2200,"image":"images/Sprayed_Coil.png","isp":1},"240":{"dimensions":{"length":48,"width":124,"height":86},"weight":2300,"image":"images/Sprayed_Coil.png","isp":1},"300":{"dimensions":{"length":48,"width":130,"height":92},"weight":3000,"image":"images/Sprayed_Coil.png","isp":1},"350":{"dimensions":{"length":48,"width":136,"height":100},"weight":3300,"image":"images/Sprayed_Coil.png","isp":1},"400":{"dimensions":{"length":48,"width":136,"height":113},"weight":3500,"image":"images/Sprayed_Coil.png","isp":1},"450":{"dimensions":{"length":48,"width":136,"height":132},"weight":3800,"image":"images/Sprayed_Coil.png","isp":1},"500":{"dimensions":{"length":48,"width":136,"height":144},"weight":4000,"image":"images/Sprayed_Coil.png","isp":1}},"Economizer_Indoor":{"label":"Economizer (Indoor)","45":{"dimensions":{"length":48,"width":58,"height":47},"weight":520,"image":"images/Economizer_Indoor.png","isp":0.05},"60":{"dimensions":{"length":48,"width":64,"height":49},"weight":580,"image":"images/Economizer_Indoor.png","isp":0.05},"85":{"dimensions":{"length":48,"width":70,"height":57},"weight":660,"image":"images/Economizer_Indoor.png","isp":0.05},"105":{"dimensions":{"length":48,"width":82,"height":59},"weight":760,"image":"images/Economizer_Indoor.png","isp":0.05},"125":{"dimensions":{"length":54,"width":88,"height":62},"weight":900,"image":"images/Economizer_Indoor.png","isp":0.05},"155":{"dimensions":{"length":54,"width":106,"height":68},"weight":1100,"image":"images/Economizer_Indoor.png","isp":0.05},"180":{"dimensions":{"length":54,"width":106,"height":76},"weight":1310,"image":"images/Economizer_Indoor.png","isp":0.05},"200":{"dimensions":{"length":66,"width":106,"height":84},"weight":1500,"image":"images/Economizer_Indoor.png","isp":0.05},"240":{"dimensions":{"length":78,"width":124,"height":86},"weight":1800,"image":"images/Economizer_Indoor.png","isp":0.05},"300":{"dimensions":{"length":78,"width":130,"height":92},"weight":2100,"image":"images/Economizer_Indoor.png","isp":0.05},"350":{"dimensions":{"length":78,"width":136,"height":100},"weight":2500,"image":"images/Economizer_Indoor.png","isp":0.05},"400":{"dimensions":{"length":84,"width":136,"height":113},"weight":2500,"image":"images/Economizer_Indoor.png","isp":0.05},"450":{"dimensions":{"length":96,"width":136,"height":132},"weight":3800,"image":"images/Economizer_Indoor.png","isp":0.05},"500":{"dimensions":{"length":108,"width":136,"height":144},"weight":4000,"image":"images/Economizer_Indoor.png","isp":0.05}},"Economizer_Outdoor":{"label":"Economizer (Outdoor)","45":{"dimensions":{"length":58,"width":58,"height":47},"weight":600,"image":"images/Economizer_Outdoor.png","isp":0.05},"60":{"dimensions":{"length":64,"width":64,"height":49},"weight":720,"image":"images/Economizer_Outdoor.png","isp":0.05},"85":{"dimensions":{"length":70,"width":70,"height":57},"weight":900,"image":"images/Economizer_Outdoor.png","isp":0.05},"105":{"dimensions":{"length":82,"width":82,"height":59},"weight":1000,"image":"images/Economizer_Outdoor.png","isp":0.05},"125":{"dimensions":{"length":88,"width":88,"height":62},"weight":1200,"image":"images/Economizer_Outdoor.png","isp":0.05},"155":{"dimensions":{"length":106,"width":106,"height":68},"weight":1800,"image":"images/Economizer_Outdoor.png","isp":0.05},"180":{"dimensions":{"length":106,"width":106,"height":76},"weight":1800,"image":"images/Economizer_Outdoor.png","isp":0.05},"200":{"dimensions":{"length":106,"width":106,"height":84},"weight":2400,"image":"images/Economizer_Outdoor.png","isp":0.05},"240":{"dimensions":{"length":124,"width":124,"height":86},"weight":2800,"image":"images/Economizer_Outdoor.png","isp":0.05},"300":{"dimensions":{"length":130,"width":130,"height":92},"weight":3300,"image":"images/Economizer_Outdoor.png","isp":0.05},"350":{"dimensions":{"length":136,"width":136,"height":100},"weight":3800,"image":"images/Economizer_Outdoor.png","isp":0.05},"400":{"dimensions":{"length":136,"width":136,"height":113},"weight":3800,"image":"images/Economizer_Outdoor.png","isp":0.05},"450":{"dimensions":{"length":136,"width":136,"height":132},"weight":4800,"image":"images/Economizer_Outdoor.png","isp":0.05},"500":{"dimensions":{"length":136,"width":136,"height":144},"weight":5000,"image":"images/Economizer_Outdoor.png","isp":0.05}},"Discharge_Plenum":{"label":"Discharge Plenum","45":{"dimensions":{"length":24,"width":58,"height":47},"weight":350,"image":"images/Discharge_Plenum.png","isp":0.1},"60":{"dimensions":{"length":24,"width":64,"height":49},"weight":375,"image":"images/Discharge_Plenum.png","isp":0.1},"85":{"dimensions":{"length":24,"width":70,"height":57},"weight":420,"image":"images/Discharge_Plenum.png","isp":0.1},"105":{"dimensions":{"length":24,"width":82,"height":59},"weight":470,"image":"images/Discharge_Plenum.png","isp":0.1},"125":{"dimensions":{"length":30,"width":88,"height":62},"weight":540,"image":"images/Discharge_Plenum.png","isp":0.1},"155":{"dimensions":{"length":30,"width":106,"height":68},"weight":725,"image":"images/Discharge_Plenum.png","isp":0.1},"180":{"dimensions":{"length":30,"width":106,"height":76},"weight":750,"image":"images/Discharge_Plenum.png","isp":0.1},"200":{"dimensions":{"length":30,"width":106,"height":84},"weight":985,"image":"images/Discharge_Plenum.png","isp":0.1},"240":{"dimensions":{"length":30,"width":124,"height":86},"weight":1160,"image":"images/Discharge_Plenum.png","isp":0.1},"300":{"dimensions":{"length":36,"width":130,"height":92},"weight":1350,"image":"images/Discharge_Plenum.png","isp":0.1},"350":{"dimensions":{"length":36,"width":136,"height":100},"weight":1400,"image":"images/Discharge_Plenum.png","isp":0.1},"400":{"dimensions":{"length":48,"width":136,"height":113},"weight":1530,"image":"images/Discharge_Plenum.png","isp":0.1},"450":{"dimensions":{"length":48,"width":136,"height":132},"weight":1700,"image":"images/Discharge_Plenum.png","isp":0.1},"500":{"dimensions":{"length":48,"width":136,"height":144},"weight":1900,"image":"images/Discharge_Plenum.png","isp":0.1}},"Diffuser_Plenum":{"label":"Diffuser Plenum","45":{"dimensions":{"length":12,"width":58,"height":47},"weight":220,"image":"images/Diffuser_Plenum.png","isp":0.25},"60":{"dimensions":{"length":12,"width":64,"height":49},"weight":240,"image":"images/Diffuser_Plenum.png","isp":0.25},"85":{"dimensions":{"length":12,"width":70,"height":57},"weight":275,"image":"images/Diffuser_Plenum.png","isp":0.25},"105":{"dimensions":{"length":12,"width":82,"height":59},"weight":315,"image":"images/Diffuser_Plenum.png","isp":0.25},"125":{"dimensions":{"length":12,"width":88,"height":62},"weight":340,"image":"images/Diffuser_Plenum.png","isp":0.25},"155":{"dimensions":{"length":18,"width":106,"height":68},"weight":600,"image":"images/Diffuser_Plenum.png","isp":0.25},"180":{"dimensions":{"length":18,"width":106,"height":76},"weight":640,"image":"images/Diffuser_Plenum.png","isp":0.25},"200":{"dimensions":{"length":18,"width":106,"height":84},"weight":660,"image":"images/Diffuser_Plenum.png","isp":0.25},"240":{"dimensions":{"length":18,"width":124,"height":86},"weight":780,"image":"images/Diffuser_Plenum.png","isp":0.25},"300":{"dimensions":{"length":18,"width":130,"height":92},"weight":900,"image":"images/Diffuser_Plenum.png","isp":0.25},"350":{"dimensions":{"length":18,"width":136,"height":100},"weight":920,"image":"images/Diffuser_Plenum.png","isp":0.25},"400":{"dimensions":{"length":18,"width":136,"height":113},"weight":950,"image":"images/Diffuser_Plenum.png","isp":0.25},"450":{"dimensions":{"length":24,"width":136,"height":132},"weight":1100,"image":"images/Diffuser_Plenum.png","isp":0.25},"500":{"dimensions":{"length":24,"width":136,"height":144},"weight":1250,"image":"images/Diffuser_Plenum.png","isp":0.25}},"Multizone_Dual_Duct":{"label":"Multizone Dual Duct","45":{"dimensions":{"length":42,"width":58,"height":47},"weight":540,"image":"images/XXX.png","isp":0.63},"60":{"dimensions":{"length":42,"width":64,"height":49},"weight":650,"image":"images/XXX.png","isp":0.63},"85":{"dimensions":{"length":48,"width":70,"height":57},"weight":750,"image":"images/XXX.png","isp":0.63},"105":{"dimensions":{"length":54,"width":82,"height":59},"weight":910,"image":"images/XXX.png","isp":0.63},"125":{"dimensions":{"length":54,"width":88,"height":62},"weight":1250,"image":"images/XXX.png","isp":0.63},"155":{"dimensions":{"length":54,"width":106,"height":68},"weight":1500,"image":"images/XXX.png","isp":0.63},"180":{"dimensions":{"length":66,"width":106,"height":76},"weight":2000,"image":"images/XXX.png","isp":0.63},"200":{"dimensions":{"length":66,"width":106,"height":84},"weight":2200,"image":"images/XXX.png","isp":0.63},"240":{"dimensions":{"length":72,"width":124,"height":86},"weight":2600,"image":"images/XXX.png","isp":0.63},"300":{"dimensions":{"length":72,"width":130,"height":92},"weight":3600,"image":"images/XXX.png","isp":0.63},"350":{"dimensions":{"length":78,"width":136,"height":100},"weight":3800,"image":"images/XXX.png","isp":0.63},"400":{"dimensions":{"length":84,"width":136,"height":113},"weight":4000,"image":"images/XXX.png","isp":0.63},"450":{"dimensions":{"length":0,"width":136,"height":132},"weight":0,"image":"images/XXX.png","isp":0.63},"500":{"dimensions":{"length":0,"width":136,"height":144},"weight":0,"image":"images/XXX.png","isp":0.63}}}
+;
+
+// ── Constants ─────────────────────────────────────────────────
+const AHU_INCREMENTS = [45, 60, 85, 105, 125, 155, 180, 200, 240, 300, 350, 400, 450, 500];
+
+// Width and height are identical across all components of the same size
+const SIZE_DIMENSIONS = {
+  '45':  {width: 58,  height: 47},
+  '60':  {width: 64,  height: 49},
+  '85':  {width: 70,  height: 57},
+  '105': {width: 82,  height: 59},
+  '125': {width: 88,  height: 62},
+  '155': {width: 106, height: 68},
+  '180': {width: 106, height: 76},
+  '200': {width: 106, height: 84},
+  '240': {width: 124, height: 86},
+  '300': {width: 130, height: 92},
+  '350': {width: 136, height: 100},
+  '400': {width: 136, height: 113},
+  '450': {width: 136, height: 132},
+  '500': {width: 136, height: 144},
+};
+const CUSTOM_STORAGE_KEY = 'ahu_custom_components';
+const PLACEHOLDER_IMG = 'images/placeholder.png';
+
+const BASE_CATEGORIES = [
+  { name: "Fans", items: [
+    { label: "Centrifugal Fan (90TH-270BH)", key: "Centrifugal Fan_90TH_270BH", img: "images/Centrifugal_Fan_90TH_270BH.png" },
+    { label: "Centrifugal Fan (360UB-180DB)", key: "Centrifugal Fan_360UB_180DB", img: "images/Centrifugal_Fan_360UB_180DB.png" },
+    { label: "Plenum Fan",                   key: "Plenum_Fan",                  img: "images/Plenum_Fan.png" }
+  ]},
+  { name: "Coils", items: [
+    { label: "Heat Coil",         key: "Heat_Coil",        img: "images/Heat_Coil.png" },
+    { label: "Integrated FBP HC", key: "Integ_FBP_HC",     img: "images/Integ_FPB_HC.png" },
+    { label: "Conv FBP HC",       key: "Conv_FBP_HC",      img: "images/Conv_FBP_HC.png" },
+    { label: "Cooling Coil",      key: "Cool_Coil",        img: "images/Cool_Coil.png" },
+    { label: "Conv FBP CC",       key: "Conv_FBP_CC",      img: "images/Conv_FBP_CC.png" },
+    { label: "Steam Humidifier",  key: "Steam_Humidifier", img: "images/Steam_Humidifier.png" },
+    { label: "Sprayed Coil",      key: "Sprayed_Coil",     img: "images/Sprayed_Coil.png" }
+  ]},
+  { name: "Filters", items: [
+    { label: "Eliminator",               key: "Elim",                  img: "images/Elim.png" },
+    { label: "Flat Filter",              key: "Flat_Filter",           img: "images/Flat_Filter.png" },
+    { label: "Angle Filter",             key: "Angle_Filter",          img: "images/Angle_Filter.png" },
+    { label: "Hi-Eff Filter (12 rigid)", key: "Hi_Eff_Filter_12rigid", img: "images/Hi_Eff_Filter.png" },
+    { label: "Hi-Eff Filter (22 bag)",   key: "Hi_Eff_Filter_22bag",   img: "images/Hi_Eff_Filter.png" },
+    { label: "Hi-Eff Filter (28 bag)",   key: "Hi_Eff_Filter_28bag",   img: "images/Hi_Eff_Filter.png" },
+    { label: "Hi-Eff Filter (32 bag)",   key: "Hi_Eff_Filter_32bag",   img: "images/Hi_Eff_Filter.png" },
+    { label: "Roll Filter",              key: "Roll_Filter",           img: "images/Roll_Filter.png" }
+  ]},
+  { name: "Damper / Sound Trap", items: [
+    { label: "Face Damper",      key: "Face_Damper",     img: "images/Face_Damper.png" },
+    { label: "Louver w/ Screen", key: "Louver_w_Screen", img: "images/Louver_w_Screen.png" },
+    { label: "Sound Trap",       key: "Sound_Trap",      img: "images/Sound_Trap.png" }
+  ]},
+  { name: "Plenum", items: [
+    { label: "Plenum",           key: "Plenum",           img: "images/Plenum.png" },
+    { label: "Plenum w/Door",    key: "Plenum_w_Door",    img: "images/Plenum_w_Door.png" },
+    { label: "Blender",          key: "Blender",          img: "images/Blender.png" },
+    { label: "Mixing Box Door",  key: "Mixing_Box_Door",  img: "images/Mixing_Box_Door.png" },
+    { label: "Discharge Plenum", key: "Discharge_Plenum", img: "images/Discharge_Plenum.png" },
+    { label: "Diffuser Plenum",  key: "Diffuser_Plenum",  img: "images/Diffuser_Plenum.png" }
+  ]},
+  { name: "Economizer", items: [
+    { label: "Economizer Indoor",  key: "Economizer_Indoor",  img: "images/Economizer_Indoor.png" },
+    { label: "Economizer Outdoor", key: "Economizer_Outdoor", img: "images/Economizer_Outdoor.png" }
+  ]}
+];
+
+// ── State ─────────────────────────────────────────────────────
+let catalog = { ...BASE_CATALOG };   // merged base + custom
+let customComponents = [];           // [{key, label, img, sizes, dimensions, weight, isp}]
+let ahuComponents = [];              // [{name, size, label, data}]
+let cfm = 0;
+let esp = 0;
+
+// ── Custom Component Persistence ──────────────────────────────
+function loadCustomComponents() {
+  try {
+    const stored = localStorage.getItem(CUSTOM_STORAGE_KEY);
+    customComponents = stored ? JSON.parse(stored) : [];
+  } catch {
+    customComponents = [];
+  }
+  rebuildCatalog();
+}
+
+function saveCustomComponents() {
+  localStorage.setItem(CUSTOM_STORAGE_KEY, JSON.stringify(customComponents));
+  rebuildCatalog();
+}
+
+function rebuildCatalog() {
+  catalog = { ...BASE_CATALOG };
+  for (const cc of customComponents) {
+    const entry = { label: cc.label };
+    for (const { size, length } of cc.sizeEntries) {
+      const dims = SIZE_DIMENSIONS[size];
+      entry[size] = {
+        dimensions: { length, width: dims.width, height: dims.height },
+        weight: cc.weight,
+        isp: cc.isp,
+        image: cc.img || PLACEHOLDER_IMG
+      };
+    }
+    catalog[cc.key] = entry;
+  }
+}
+
+// ── AHU Calculations ──────────────────────────────────────────
+function sizeFromCFM(cfmVal) {
+  if (cfmVal <= 0) return null;
+  const req = Math.ceil(cfmVal / 100);
+  for (const s of AHU_INCREMENTS) {
+    if (s >= req) return String(s);
+  }
+  return null;
+}
+
+function getModelSize()  { return sizeFromCFM(cfm); }
+function getAHUWeight()  { return ahuComponents.reduce((s, c) => s + c.data.weight, 0); }
+function getISP()        { return ahuComponents.reduce((s, c) => s + c.data.isp, 0); }
+function getTSP()        { return esp + getISP(); }
+function getBHP()        { return (getTSP() * cfm) / (6356 * 0.65); }
+
+function getAHUDimensions() {
+  if (!ahuComponents.length) return { length: 0, width: 0, height: 0 };
+  return {
+    length: ahuComponents.reduce((s, c) => s + c.data.dimensions.length, 0),
+    width:  Math.max(...ahuComponents.map(c => c.data.dimensions.width)),
+    height: Math.max(...ahuComponents.map(c => c.data.dimensions.height))
+  };
+}
+
+// ── Component Management ──────────────────────────────────────
+function addComponent(key) {
+  const size = getModelSize();
+  if (!size) {
+    alert("Please enter a valid CFM value before adding components.");
+    return;
+  }
+  const entry = catalog[key];
+  if (!entry || !entry[size]) {
+    alert(`Size ${size} is not available for this component.`);
+    return;
+  }
+  ahuComponents.push({ name: key, size, label: entry.label, data: entry[size] });
+  updateDisplay();
+}
+
+function removeComponent(index) {
+  ahuComponents.splice(index, 1);
+  updateDisplay();
+}
+
+function moveComponent(fromIndex, toIndex) {
+  if (fromIndex === toIndex) return;
+  if (fromIndex < toIndex) toIndex -= 1;
+  const [comp] = ahuComponents.splice(fromIndex, 1);
+  ahuComponents.splice(toIndex, 0, comp);
+}
+
+// ── Display ───────────────────────────────────────────────────
+function updateDisplay() {
+  updateVisualArea();
+  updateComponentList();
+  updateSummary();
+}
+
+function updateVisualArea() {
+  const container = document.getElementById('image-container');
+  const empty     = document.getElementById('image-container-empty');
+
+  container.querySelectorAll('.visual-component').forEach(el => el.remove());
+
+  if (!ahuComponents.length) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  ahuComponents.forEach((comp, index) => {
+    const div = document.createElement('div');
+    div.className = 'visual-component';
+    div.draggable = true;
+    div.dataset.index = index;
+
+    const img = document.createElement('img');
+    img.src = comp.data.image;
+    img.alt = comp.label;
+    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+
+    const lbl = document.createElement('span');
+    lbl.textContent = `${comp.label}\nSize ${comp.size}`;
+    lbl.style.whiteSpace = 'pre-line';
+
+    div.appendChild(img);
+    div.appendChild(lbl);
+
+    div.addEventListener('dragstart',  onVisualDragStart);
+    div.addEventListener('dragend',    onVisualDragEnd);
+    div.addEventListener('dragover',   onVisualItemDragOver);
+    div.addEventListener('dragleave',  onVisualItemDragLeave);
+    div.addEventListener('drop',       onVisualItemDrop);
+
+    container.appendChild(div);
+  });
+}
+
+function updateComponentList() {
+  const list = document.getElementById('component-list');
+  list.innerHTML = '';
+
+  ahuComponents.forEach((comp, index) => {
+    const row = document.createElement('div');
+    row.className = 'component-row';
+    row.draggable = true;
+    row.dataset.index = index;
+
+    const lbl = document.createElement('span');
+    lbl.className = 'row-label';
+    lbl.textContent = comp.label;
+
+    const del = document.createElement('span');
+    del.className = 'delete-btn';
+    del.textContent = '\uD83D\uDDD1';
+    del.title = 'Remove';
+    del.addEventListener('click', e => { e.stopPropagation(); removeComponent(index); });
+
+    row.appendChild(lbl);
+    row.appendChild(del);
+    row.addEventListener('dragstart', onListDragStart);
+    row.addEventListener('dragend',   onListDragEnd);
+
+    list.appendChild(row);
+  });
+}
+
+function updateSummary() {
+  const size    = getModelSize();
+  const dims    = getAHUDimensions();
+  const hasComps = ahuComponents.length > 0;
+
+  document.getElementById('sum-model-size').textContent  = `Model Size: ${size ?? '-'}`;
+  document.getElementById('sum-cfm').textContent         = `CFM: ${cfm ? cfm.toLocaleString() : '-'}`;
+  document.getElementById('sum-tsp').textContent         = hasComps ? `TSP: ${getTSP().toFixed(2)} in.w.g.` : 'TSP: -';
+  document.getElementById('sum-dimensions').textContent  = hasComps
+    ? `Overall Dimensions: ${dims.length}" L \xD7 ${dims.width}" W \xD7 ${dims.height}" H`
+    : 'Overall Dimensions: -';
+  document.getElementById('sum-weight').textContent      = hasComps ? `Total Weight: ${getAHUWeight().toLocaleString()} lb` : 'Total Weight: -';
+  document.getElementById('sum-bhp').textContent         = (hasComps && cfm) ? `BHP: ${getBHP().toFixed(3)}` : 'BHP: -';
+}
+
+// ── Build Dropdowns ───────────────────────────────────────────
+function buildDropdowns() {
+  const wrapper = document.getElementById('dropdowns-wrapper');
+  wrapper.innerHTML = '';
+
+  // Base categories
+  BASE_CATEGORIES.forEach(cat => {
+    wrapper.appendChild(buildCategoryDetails(cat.name, cat.items, false));
+  });
+
+  // Custom components section
+  const customItems = customComponents.map(cc => ({
+    label: cc.label,
+    key:   cc.key,
+    img:   cc.img || PLACEHOLDER_IMG,
+    isCustom: true
+  }));
+  const customDetails = buildCategoryDetails('Custom Components', customItems, true);
+  customDetails.open = true;
+  wrapper.appendChild(customDetails);
+
+  // "Add custom component" button inside the custom section
+  const addBtn = document.createElement('button');
+  addBtn.id = 'add-custom-btn';
+  addBtn.textContent = '+ Add Custom Component';
+  addBtn.onclick = openModal;
+  wrapper.appendChild(addBtn);
+}
+
+function buildCategoryDetails(name, items, isCustom) {
+  const details = document.createElement('details');
+  details.className = 'dropdown-section';
+
+  const summary = document.createElement('summary');
+  summary.textContent = name;
+  details.appendChild(summary);
+
+  const content = document.createElement('div');
+  content.className = 'dropdown-content';
+
+  items.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'component-btn';
+    btn.onclick = () => addComponent(item.key);
+
+    const img = document.createElement('img');
+    img.src = item.img;
+    img.alt = item.label;
+    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+
+    const lbl = document.createElement('span');
+    lbl.textContent = item.label;
+
+    btn.appendChild(img);
+    btn.appendChild(lbl);
+
+    if (isCustom) {
+      const delBtn = document.createElement('span');
+      delBtn.className = 'btn-delete';
+      delBtn.textContent = '\u2715';
+      delBtn.title = 'Delete custom component';
+      delBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        deleteCustomComponent(item.key);
+      });
+      btn.appendChild(delBtn);
+    }
+
+    content.appendChild(btn);
+  });
+
+  details.appendChild(content);
+  return details;
+}
+
+// ── Custom Component Modal ────────────────────────────────────
+let pendingImageDataUrl = null;
+
+function buildSizesTable() {
+  const table = document.getElementById('m-sizes-table');
+  table.innerHTML = '';
+  for (const size of AHU_INCREMENTS) {
+    const s = String(size);
+    const dims = SIZE_DIMENSIONS[s];
+    const row = document.createElement('div');
+    row.className = 'size-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `sz-cb-${s}`;
+
+    const lbl = document.createElement('label');
+    lbl.htmlFor = `sz-cb-${s}`;
+    lbl.className = 'size-label';
+    lbl.textContent = `${s}`;
+
+    const lengthInput = document.createElement('input');
+    lengthInput.type = 'number';
+    lengthInput.min = '0';
+    lengthInput.placeholder = 'Length (in.)';
+    lengthInput.id = `sz-len-${s}`;
+    lengthInput.disabled = true;
+
+    const dimSpan = document.createElement('span');
+    dimSpan.className = 'size-dims';
+    dimSpan.textContent = `${dims.width}"W \xD7 ${dims.height}"H`;
+
+    cb.addEventListener('change', () => {
+      lengthInput.disabled = !cb.checked;
+      if (cb.checked) lengthInput.focus();
+    });
+
+    row.appendChild(cb);
+    row.appendChild(lbl);
+    row.appendChild(lengthInput);
+    row.appendChild(dimSpan);
+    table.appendChild(row);
+  }
+}
+
+function openModal() {
+  pendingImageDataUrl = null;
+  document.getElementById('m-name').value  = '';
+  document.getElementById('m-isp').value   = '';
+  document.getElementById('m-weight').value = '';
+  document.getElementById('m-image').value = '';
+  document.getElementById('modal-image-preview').src = PLACEHOLDER_IMG;
+  buildSizesTable();
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('m-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+document.getElementById('m-image').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) { pendingImageDataUrl = null; document.getElementById('modal-image-preview').src = PLACEHOLDER_IMG; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    pendingImageDataUrl = e.target.result;
+    document.getElementById('modal-image-preview').src = pendingImageDataUrl;
+  };
+  reader.readAsDataURL(file);
+});
+
+function saveCustomComponent() {
+  const name   = document.getElementById('m-name').value.trim();
+  const isp    = parseFloat(document.getElementById('m-isp').value);
+  const weight = parseFloat(document.getElementById('m-weight').value);
+
+  if (!name)       { alert('Component name is required.'); return; }
+  if (isNaN(isp))  { alert('ISP is required.'); return; }
+  if (isNaN(weight)) { alert('Weight is required.'); return; }
+
+  // Collect checked sizes with their lengths
+  const sizeEntries = [];
+  for (const size of AHU_INCREMENTS) {
+    const s = String(size);
+    const cb = document.getElementById(`sz-cb-${s}`);
+    if (!cb.checked) continue;
+    const len = parseFloat(document.getElementById(`sz-len-${s}`).value);
+    if (isNaN(len) || len <= 0) { alert(`Please enter a valid length for size ${s}.`); return; }
+    sizeEntries.push({ size: s, length: len });
+  }
+  if (!sizeEntries.length) { alert('Please select at least one size.'); return; }
+
+  const key = 'custom_' + name.replace(/\s+/g, '_') + '_' + Date.now();
+
+  customComponents.push({
+    key, label: name, img: pendingImageDataUrl || null,
+    sizeEntries, weight, isp
+  });
+
+  saveCustomComponents();
+  buildDropdowns();
+  closeModal();
+}
+
+function deleteCustomComponent(key) {
+  if (!confirm('Remove this custom component?')) return;
+  customComponents = customComponents.filter(c => c.key !== key);
+  // Also remove from current AHU layout if present
+  ahuComponents = ahuComponents.filter(c => c.name !== key);
+  saveCustomComponents();
+  buildDropdowns();
+  updateDisplay();
+}
+
+// ── Visual Drag & Drop ────────────────────────────────────────
+let visualDragSrcIndex = null;
+
+function clearVisualIndicators() {
+  document.querySelectorAll('.visual-component').forEach(el =>
+    el.classList.remove('drag-over-left', 'drag-over-right')
+  );
+}
+
+function onVisualDragStart(e) {
+  visualDragSrcIndex = parseInt(e.currentTarget.dataset.index);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', 'visual');
+}
+
+function onVisualDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  clearVisualIndicators();
+  visualDragSrcIndex = null;
+}
+
+function onVisualItemDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+  clearVisualIndicators();
+  const target = e.currentTarget;
+  const rect = target.getBoundingClientRect();
+  target.classList.add(e.clientX < rect.left + rect.width / 2 ? 'drag-over-left' : 'drag-over-right');
+}
+
+function onVisualItemDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over-left', 'drag-over-right');
+}
+
+function onVisualItemDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const target      = e.currentTarget;
+  const targetIndex = parseInt(target.dataset.index);
+  const rect        = target.getBoundingClientRect();
+  const dropIndex   = e.clientX < rect.left + rect.width / 2 ? targetIndex : targetIndex + 1;
+  clearVisualIndicators();
+  if (visualDragSrcIndex !== null && visualDragSrcIndex !== dropIndex) {
+    moveComponent(visualDragSrcIndex, dropIndex);
+    updateDisplay();
+  }
+  visualDragSrcIndex = null;
+}
+
+function onContainerDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function onContainerDrop(e) {
+  e.preventDefault();
+  clearVisualIndicators();
+  if (visualDragSrcIndex !== null) {
+    moveComponent(visualDragSrcIndex, ahuComponents.length);
+    updateDisplay();
+  }
+  visualDragSrcIndex = null;
+}
+
+// ── List Drag & Drop ──────────────────────────────────────────
+let listDragSrcIndex = null;
+
+function clearListIndicators() {
+  document.querySelectorAll('.component-row').forEach(el =>
+    el.classList.remove('drag-over-top', 'drag-over-bottom')
+  );
+}
+
+function onListDragStart(e) {
+  listDragSrcIndex = parseInt(e.currentTarget.dataset.index);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', 'list');
+}
+
+function onListDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  clearListIndicators();
+  listDragSrcIndex = null;
+}
+
+function onListDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  clearListIndicators();
+  const target = e.target.closest('.component-row');
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    target.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-top' : 'drag-over-bottom');
+  }
+}
+
+function onListDragLeave(e) {
+  if (!document.getElementById('component-list').contains(e.relatedTarget)) clearListIndicators();
+}
+
+function onListDrop(e) {
+  e.preventDefault();
+  clearListIndicators();
+  if (listDragSrcIndex === null) return;
+  const target = e.target.closest('.component-row');
+  let dropIndex;
+  if (!target) {
+    dropIndex = ahuComponents.length;
+  } else {
+    const targetIndex = parseInt(target.dataset.index);
+    const rect = target.getBoundingClientRect();
+    dropIndex = e.clientY < rect.top + rect.height / 2 ? targetIndex : targetIndex + 1;
+  }
+  if (listDragSrcIndex !== dropIndex) {
+    moveComponent(listDragSrcIndex, dropIndex);
+    updateDisplay();
+  }
+  listDragSrcIndex = null;
+}
+
+// ── Input Handlers ────────────────────────────────────────────
+document.getElementById('cfm-entry').addEventListener('input', function () {
+  cfm = parseFloat(this.value) || 0;
+  updateSummary();
+});
+
+document.getElementById('esp-entry').addEventListener('input', function () {
+  esp = parseFloat(this.value) || 0;
+  updateSummary();
+});
+
+// ── Init ──────────────────────────────────────────────────────
+loadCustomComponents();
+buildDropdowns();
+updateDisplay();
+</script>
+</body>
+</html>
