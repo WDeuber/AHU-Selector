@@ -367,9 +367,14 @@ class AHUGUI:
         self.drag_target_side = "supply"
         self.visual_drag_indicator = None
 
-        # References to display frames for dual tunnel
+        # References to display frames and wrappers for dual tunnel
         self.supply_display = None
         self.return_display = None
+        self.supply_wrapper = None
+        self.return_wrapper = None
+
+        # Which tunnel is active for adding new components
+        self.selected_tunnel = "supply"
 
     def update_cfm(self):
         try:
@@ -419,10 +424,30 @@ class AHUGUI:
         self.ahu.tunnel_mode = new_mode
         if new_mode == "single":
             self.ahu.return_components = []
+            self.selected_tunnel = "supply"
         # Rebuild list area to reflect new layout
         self.build_list_area()
         self.update_visual_area()
         self.update_summary_area()
+
+    def select_tunnel(self, side):
+        self.selected_tunnel = side
+        self._update_tunnel_highlights()
+
+    def _update_tunnel_highlights(self):
+        if not self.return_wrapper or not self.supply_wrapper:
+            return
+        selected_bg = "#D6EAFF"
+        normal_bg = "#F0F0F0"
+        for wrapper, wrapper_side in (
+            (self.return_wrapper, "return"),
+            (self.supply_wrapper, "supply"),
+        ):
+            bg = selected_bg if self.selected_tunnel == wrapper_side else normal_bg
+            wrapper.config(bg=bg)
+            for child in wrapper.winfo_children():
+                if isinstance(child, tk.Label):
+                    child.config(bg=bg)
 
     def build_cfm_input(self, parent):
         frame = tk.Frame(parent, bg="#F5F5F5")
@@ -575,6 +600,8 @@ class AHUGUI:
             widget.destroy()
         self.supply_display = None
         self.return_display = None
+        self.supply_wrapper = None
+        self.return_wrapper = None
 
         if self.ahu.tunnel_mode == "dual":
             self._build_dual_tunnel_visual()
@@ -607,19 +634,20 @@ class AHUGUI:
 
     def _build_dual_tunnel_visual(self):
         # Return row (top)
-        return_wrapper = tk.Frame(self.image_container, bg="#F0F0F0", bd=1, relief="groove")
-        return_wrapper.pack(fill="x", pady=(0, 4))
+        self.return_wrapper = tk.Frame(self.image_container, bd=1, relief="groove")
+        self.return_wrapper.pack(fill="x", pady=(0, 4))
 
-        tk.Label(
-            return_wrapper,
+        return_label = tk.Label(
+            self.return_wrapper,
             text="Return",
             font=("Arial", 10, "bold"),
-            bg="#F0F0F0",
             width=7,
             anchor="center"
-        ).pack(side="left", padx=6, pady=4)
+        )
+        return_label.pack(side="left", padx=6, pady=4)
 
-        self.return_display = tk.Frame(return_wrapper, bg="white")
+        self.return_display = tk.Frame(self.return_wrapper, bg="white", height=130)
+        self.return_display.pack_propagate(False)   # keep height even when empty
         self.return_display.pack(side="left", fill="both", expand=True, padx=4, pady=4)
 
         for index, comp in enumerate(self.ahu.return_components):
@@ -644,19 +672,20 @@ class AHUGUI:
             btn.bind("<ButtonRelease-1>", self._end_image_drag)
 
         # Supply row (bottom)
-        supply_wrapper = tk.Frame(self.image_container, bg="#F0F0F0", bd=1, relief="groove")
-        supply_wrapper.pack(fill="x", pady=(4, 0))
+        self.supply_wrapper = tk.Frame(self.image_container, bd=1, relief="groove")
+        self.supply_wrapper.pack(fill="x", pady=(4, 0))
 
-        tk.Label(
-            supply_wrapper,
+        supply_label = tk.Label(
+            self.supply_wrapper,
             text="Supply",
             font=("Arial", 10, "bold"),
-            bg="#F0F0F0",
             width=7,
             anchor="center"
-        ).pack(side="left", padx=6, pady=4)
+        )
+        supply_label.pack(side="left", padx=6, pady=4)
 
-        self.supply_display = tk.Frame(supply_wrapper, bg="white")
+        self.supply_display = tk.Frame(self.supply_wrapper, bg="white", height=130)
+        self.supply_display.pack_propagate(False)   # keep height even when empty
         self.supply_display.pack(side="left", fill="both", expand=True, padx=4, pady=4)
 
         for index, comp in enumerate(self.ahu.components):
@@ -679,6 +708,15 @@ class AHUGUI:
             btn.bind("<Button-1>", self._start_image_drag)
             btn.bind("<B1-Motion>", self._on_image_drag)
             btn.bind("<ButtonRelease-1>", self._end_image_drag)
+
+        # Bind click-to-select on wrappers, labels, and display frames
+        for widget in (self.return_wrapper, return_label, self.return_display):
+            widget.bind("<Button-1>", lambda e: self.select_tunnel("return"))
+        for widget in (self.supply_wrapper, supply_label, self.supply_display):
+            widget.bind("<Button-1>", lambda e: self.select_tunnel("supply"))
+
+        # Apply initial highlight
+        self._update_tunnel_highlights()
 
     def get_component_image(self, component_name):
         try:
@@ -705,6 +743,9 @@ class AHUGUI:
         self.drag_start_index = lbl.drag_index
         self.drag_start_side = lbl.drag_side
         self.drag_target_side = lbl.drag_side
+        # Clicking a component also selects that tunnel
+        if self.ahu.tunnel_mode == "dual":
+            self.select_tunnel(lbl.drag_side)
 
         self.visual_drag_indicator = tk.Frame(
             self.visual_frame,
@@ -950,8 +991,8 @@ class AHUGUI:
             print("Invalid CFM")
             return
         try:
-            # In dual mode, add to supply by default; user can drag to return
-            self.ahu.add_component(comp_name, size, side="supply")
+            side = self.selected_tunnel if self.ahu.tunnel_mode == "dual" else "supply"
+            self.ahu.add_component(comp_name, size, side=side)
             self.update_display()
         except KeyError:
             print(f"Size {size} not found for {comp_name}")
