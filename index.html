@@ -940,6 +940,22 @@
     }
     #tsp-popup td:last-child { text-align: right; font-weight: 600; }
     #tsp-popup tr:last-child td { border-bottom: none; }
+    #tsp-popup .popup-section-header {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #60a5fa;
+      padding: 8px 0 4px;
+      border-bottom: 1px solid var(--sum-hdr-border);
+    }
+    #tsp-popup tbody tr:first-child .popup-section-header { padding-top: 4px; }
+    #tsp-popup .popup-empty {
+      font-size: 11px;
+      color: var(--sum-label);
+      font-style: italic;
+      padding: 4px 0;
+    }
     #tsp-popup .popup-total {
       display: flex;
       justify-content: space-between;
@@ -1927,25 +1943,52 @@ function showTspPopup(e) {
   const popup = document.getElementById('tsp-popup');
   const tbody = document.getElementById('tsp-popup-body');
 
-  // Build rows: one per supply component + external static pressure
   tbody.innerHTML = '';
-  const rows = [...ahuComponents.map(c => ({ label: c.label || c.name, isp: c.data.isp }))];
-  rows.push({ label: 'External Static Pressure', isp: esp });
 
-  rows.forEach(r => {
+  function addSectionHeader(label) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.label}</td><td>${r.isp.toFixed(2)}</td>`;
+    tr.innerHTML = `<td colspan="2" class="popup-section-header">${label}</td>`;
     tbody.appendChild(tr);
-  });
+  }
+
+  function addRow(label, isp) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${label}</td><td>${isp.toFixed(2)}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  addSectionHeader('Supply');
+  if (ahuComponents.length) {
+    ahuComponents.forEach(c => addRow(c.label || c.name, c.data.isp));
+  } else {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="2" class="popup-empty">No components</td>`;
+    tbody.appendChild(tr);
+  }
+
+  addSectionHeader('Return');
+  if (returnComponents.length) {
+    returnComponents.forEach(c => addRow(c.label || c.name, c.data.isp));
+  } else {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="2" class="popup-empty">No components</td>`;
+    tbody.appendChild(tr);
+  }
+
+  addSectionHeader('Other');
+  addRow('External Static Pressure', esp);
 
   document.getElementById('tsp-popup-total').textContent = getTSP().toFixed(2) + ' in.w.g.';
 
-  // Position near the (i) button
+  // Show offscreen first to measure height, then position above the button
+  popup.style.visibility = 'hidden';
+  popup.classList.add('open');
   const btn = document.getElementById('tsp-info-btn');
   const rect = btn.getBoundingClientRect();
-  popup.style.top  = (rect.bottom + 6) + 'px';
+  const popupH = popup.offsetHeight;
+  popup.style.top  = (rect.top - popupH - 8) + 'px';
   popup.style.left = Math.max(8, rect.left - 220) + 'px';
-  popup.classList.add('open');
+  popup.style.visibility = '';
 }
 
 function closeTspPopup() {
