@@ -698,6 +698,137 @@
     .component-row:hover .delete-btn { display: block; }
     .delete-btn:hover { color: #ef4444; }
 
+    /* ── Tunnel Selector ────────────────────────────────────────── */
+    #tunnel-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 16px;
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+    #tunnel-row label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    #tunnel-select {
+      background: var(--bg-input);
+      border: 1px solid var(--border-input);
+      border-radius: 6px;
+      color: var(--text-input);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    #tunnel-select:focus { outline: none; border-color: #3b82f6; }
+
+    /* ── Dual Tunnel Visual ──────────────────────────────────────── */
+    .dual-tunnel-container {
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+      gap: 6px;
+    }
+    .tunnel-row {
+      display: flex;
+      align-items: stretch;
+      border: 1.5px solid var(--border-vis-comp);
+      border-radius: 10px;
+      background: var(--bg-raised);
+      min-height: 130px;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .tunnel-row.tunnel-selected {
+      border-color: #3b82f6;
+      background: rgba(59,130,246,0.06);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+    .tunnel-row.drag-row-target {
+      border-color: #22c55e;
+      background: rgba(34,197,94,0.06);
+    }
+    .tunnel-row-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--border-subtle);
+      min-width: 62px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .tunnel-row.tunnel-selected .tunnel-row-label { color: #3b82f6; }
+    .tunnel-row-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      padding: 10px;
+      gap: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar) transparent;
+      min-height: 130px;
+    }
+    .tunnel-row-content::-webkit-scrollbar { height: 4px; }
+    .tunnel-row-content::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+    .tunnel-empty-msg {
+      color: var(--text-dim);
+      font-size: 12px;
+      font-style: italic;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ── Dual List Columns ───────────────────────────────────────── */
+    .dual-list-container {
+      display: flex;
+      height: 100%;
+      overflow: hidden;
+    }
+    .list-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border-subtle);
+    }
+    .list-column:last-child { border-right: none; }
+    .list-col-header {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      padding: 5px 10px 4px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .list-col-items {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar) transparent;
+    }
+    .list-col-items::-webkit-scrollbar { width: 4px; }
+    .list-col-items::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
     /* ── Summary Frame ──────────────────────────────────────── */
     #summary-frame {
       flex: 1;
@@ -773,6 +904,13 @@
         <label for="esp-entry">External Static Pressure (in. w.g.)</label>
         <input type="number" id="esp-entry" min="0" step="0.01" placeholder="0">
       </div>
+    </div>
+    <div id="tunnel-row">
+      <label for="tunnel-select">Tunnel Type</label>
+      <select id="tunnel-select" onchange="onTunnelChange(this.value)">
+        <option value="single">Single Tunnel</option>
+        <option value="dual">Dual Tunnel</option>
+      </select>
     </div>
     <div id="dropdowns-wrapper">
       <!-- Populated by JS -->
@@ -936,7 +1074,10 @@ const BASE_CATEGORIES = [
 // ── State ─────────────────────────────────────────────────────
 let catalog = { ...BASE_CATALOG };   // merged base + custom
 let customComponents = [];           // [{key, label, img, sizes, dimensions, weight, isp}]
-let ahuComponents = [];              // [{name, size, label, data}]
+let ahuComponents = [];              // supply components [{name, size, label, data}]
+let returnComponents = [];           // return components (dual tunnel only)
+let tunnelMode     = 'single';       // 'single' | 'dual'
+let selectedTunnel = 'supply';       // which tunnel is active for adding
 let cfm = 0;
 let esp = 0;
 
@@ -984,18 +1125,44 @@ function sizeFromCFM(cfmVal) {
 }
 
 function getModelSize()  { return sizeFromCFM(cfm); }
-function getAHUWeight()  { return ahuComponents.reduce((s, c) => s + c.data.weight, 0); }
+function getAHUWeight()  {
+  return [...ahuComponents, ...returnComponents].reduce((s, c) => s + c.data.weight, 0);
+}
 function getISP()        { return ahuComponents.reduce((s, c) => s + c.data.isp, 0); }
 function getTSP()        { return esp + getISP(); }
 function getBHP()        { return (getTSP() * cfm) / (6356 * 0.65); }
 
 function getAHUDimensions() {
-  if (!ahuComponents.length) return { length: 0, width: 0, height: 0 };
+  const all = [...ahuComponents, ...returnComponents];
+  if (!all.length) return { length: 0, width: 0, height: 0 };
   return {
     length: ahuComponents.reduce((s, c) => s + c.data.dimensions.length, 0),
-    width:  Math.max(...ahuComponents.map(c => c.data.dimensions.width)),
-    height: Math.max(...ahuComponents.map(c => c.data.dimensions.height))
+    width:  Math.max(...all.map(c => c.data.dimensions.width)),
+    height: Math.max(...all.map(c => c.data.dimensions.height))
   };
+}
+
+// ── Tunnel Mode ────────────────────────────────────────────────
+function onTunnelChange(value) {
+  tunnelMode = value;
+  if (value === 'single') {
+    returnComponents = [];
+    selectedTunnel = 'supply';
+  }
+  updateDisplay();
+}
+
+function selectTunnel(side) {
+  selectedTunnel = side;
+  updateTunnelHighlights();
+}
+
+function updateTunnelHighlights() {
+  const returnRow = document.getElementById('tunnel-return-row');
+  const supplyRow = document.getElementById('tunnel-supply-row');
+  if (!returnRow || !supplyRow) return;
+  returnRow.classList.toggle('tunnel-selected', selectedTunnel === 'return');
+  supplyRow.classList.toggle('tunnel-selected', selectedTunnel === 'supply');
 }
 
 // ── Component Management ──────────────────────────────────────
@@ -1010,20 +1177,36 @@ function addComponent(key) {
     alert(`Size ${size} is not available for this component.`);
     return;
   }
-  ahuComponents.push({ name: key, size, label: entry.label, data: entry[size] });
+  const comp = { name: key, size, label: entry.label, data: entry[size] };
+  if (tunnelMode === 'dual' && selectedTunnel === 'return') {
+    returnComponents.push(comp);
+  } else {
+    ahuComponents.push(comp);
+  }
   updateDisplay();
 }
 
-function removeComponent(index) {
-  ahuComponents.splice(index, 1);
+function removeComponent(index, side = 'supply') {
+  const arr = side === 'return' ? returnComponents : ahuComponents;
+  arr.splice(index, 1);
   updateDisplay();
 }
 
-function moveComponent(fromIndex, toIndex) {
+function moveComponent(fromIndex, toIndex, side = 'supply') {
+  const arr = side === 'return' ? returnComponents : ahuComponents;
   if (fromIndex === toIndex) return;
   if (fromIndex < toIndex) toIndex -= 1;
-  const [comp] = ahuComponents.splice(fromIndex, 1);
-  ahuComponents.splice(toIndex, 0, comp);
+  const [comp] = arr.splice(fromIndex, 1);
+  arr.splice(toIndex, 0, comp);
+}
+
+function moveComponentBetweenRows(fromIndex, fromSide, toIndex, toSide) {
+  const src = fromSide === 'return' ? returnComponents : ahuComponents;
+  const dst = toSide   === 'return' ? returnComponents : ahuComponents;
+  if (fromIndex < 0 || fromIndex >= src.length) return;
+  const [comp] = src.splice(fromIndex, 1);
+  toIndex = Math.min(toIndex, dst.length);
+  dst.splice(toIndex, 0, comp);
 }
 
 // ── Display ───────────────────────────────────────────────────
@@ -1037,66 +1220,150 @@ function updateVisualArea() {
   const container = document.getElementById('image-container');
   const empty     = document.getElementById('image-container-empty');
 
-  container.querySelectorAll('.visual-component').forEach(el => el.remove());
+  container.querySelectorAll('.visual-component, .tunnel-row').forEach(el => el.remove());
 
-  if (!ahuComponents.length) { empty.style.display = ''; return; }
-  empty.style.display = 'none';
+  if (tunnelMode === 'dual') {
+    empty.style.display = 'none';
+    container.classList.add('dual-tunnel-container');
+    ['return', 'supply'].forEach(side => {
+      const components = side === 'return' ? returnComponents : ahuComponents;
 
-  ahuComponents.forEach((comp, index) => {
-    const div = document.createElement('div');
-    div.className = 'visual-component';
-    div.draggable = true;
-    div.dataset.index = index;
+      const row = document.createElement('div');
+      row.className = 'tunnel-row' + (selectedTunnel === side ? ' tunnel-selected' : '');
+      row.id = `tunnel-${side}-row`;
+      row.addEventListener('click', e => {
+        if (!e.target.closest('.visual-component')) selectTunnel(side);
+      });
 
-    const img = document.createElement('img');
-    img.src = comp.data.image;
-    img.alt = comp.label;
-    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+      const lbl = document.createElement('div');
+      lbl.className = 'tunnel-row-label';
+      lbl.textContent = side.charAt(0).toUpperCase() + side.slice(1);
+      lbl.addEventListener('click', () => selectTunnel(side));
 
-    const lbl = document.createElement('span');
-    lbl.textContent = `${comp.label}\nSize ${comp.size}`;
-    lbl.style.whiteSpace = 'pre-line';
+      const rowContent = document.createElement('div');
+      rowContent.className = 'tunnel-row-content';
+      rowContent.id = `tunnel-${side}-content`;
+      rowContent.addEventListener('dragover',  e => onTunnelRowDragOver(e, side));
+      rowContent.addEventListener('drop',      e => onTunnelRowDrop(e, side));
+      rowContent.addEventListener('dragleave', e => onTunnelRowDragLeave(e, side));
 
-    div.appendChild(img);
-    div.appendChild(lbl);
+      if (!components.length) {
+        const msg = document.createElement('span');
+        msg.className = 'tunnel-empty-msg';
+        msg.textContent = 'Drop components here';
+        rowContent.appendChild(msg);
+      }
 
-    div.addEventListener('dragstart',  onVisualDragStart);
-    div.addEventListener('dragend',    onVisualDragEnd);
-    div.addEventListener('dragover',   onVisualItemDragOver);
-    div.addEventListener('dragleave',  onVisualItemDragLeave);
-    div.addEventListener('drop',       onVisualItemDrop);
+      components.forEach((comp, index) => {
+        rowContent.appendChild(makeVisualComp(comp, index, side));
+      });
 
-    container.appendChild(div);
-  });
+      row.appendChild(lbl);
+      row.appendChild(rowContent);
+      container.appendChild(row);
+    });
+  } else {
+    container.classList.remove('dual-tunnel-container');
+    if (!ahuComponents.length) { empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    ahuComponents.forEach((comp, index) => {
+      container.appendChild(makeVisualComp(comp, index, 'supply'));
+    });
+  }
+}
+
+function makeVisualComp(comp, index, side) {
+  const div = document.createElement('div');
+  div.className = 'visual-component';
+  div.draggable = true;
+  div.dataset.index = index;
+  div.dataset.side  = side;
+
+  const img = document.createElement('img');
+  img.src = comp.data.image;
+  img.alt = comp.label;
+  img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+
+  const lbl = document.createElement('span');
+  lbl.textContent = `${comp.label}\nSize ${comp.size}`;
+  lbl.style.whiteSpace = 'pre-line';
+
+  div.appendChild(img);
+  div.appendChild(lbl);
+
+  div.addEventListener('dragstart',  onVisualDragStart);
+  div.addEventListener('dragend',    onVisualDragEnd);
+  div.addEventListener('dragover',   onVisualItemDragOver);
+  div.addEventListener('dragleave',  onVisualItemDragLeave);
+  div.addEventListener('drop',       onVisualItemDrop);
+  return div;
 }
 
 function updateComponentList() {
   const list = document.getElementById('component-list');
   list.innerHTML = '';
 
-  ahuComponents.forEach((comp, index) => {
-    const row = document.createElement('div');
-    row.className = 'component-row';
-    row.draggable = true;
-    row.dataset.index = index;
+  if (tunnelMode === 'dual') {
+    list.className = 'dual-list-container';
+    ['return', 'supply'].forEach(side => {
+      const components = side === 'return' ? returnComponents : ahuComponents;
 
-    const lbl = document.createElement('span');
-    lbl.className = 'row-label';
-    lbl.textContent = comp.label;
+      const col = document.createElement('div');
+      col.className = 'list-column';
 
-    const del = document.createElement('span');
-    del.className = 'delete-btn';
-    del.textContent = '\uD83D\uDDD1';
-    del.title = 'Remove';
-    del.addEventListener('click', e => { e.stopPropagation(); removeComponent(index); });
+      const hdr = document.createElement('div');
+      hdr.className = 'list-col-header';
+      hdr.textContent = side.charAt(0).toUpperCase() + side.slice(1);
 
-    row.appendChild(lbl);
-    row.appendChild(del);
-    row.addEventListener('dragstart', onListDragStart);
-    row.addEventListener('dragend',   onListDragEnd);
+      const items = document.createElement('div');
+      items.className = 'list-col-items';
+      items.dataset.side = side;
+      items.addEventListener('dragover',  e => onColListDragOver(e, side));
+      items.addEventListener('drop',      e => onColListDrop(e, side));
+      items.addEventListener('dragleave', e => onColListDragLeave(e, items));
 
-    list.appendChild(row);
-  });
+      components.forEach((comp, index) => {
+        const row = makeListRow(comp, index, side);
+        row.addEventListener('dragstart', onListDragStart);
+        row.addEventListener('dragend',   onListDragEnd);
+        items.appendChild(row);
+      });
+
+      col.appendChild(hdr);
+      col.appendChild(items);
+      list.appendChild(col);
+    });
+  } else {
+    list.className = '';
+    ahuComponents.forEach((comp, index) => {
+      const row = makeListRow(comp, index, 'supply');
+      row.addEventListener('dragstart', onListDragStart);
+      row.addEventListener('dragend',   onListDragEnd);
+      list.appendChild(row);
+    });
+  }
+}
+
+function makeListRow(comp, index, side) {
+  const row = document.createElement('div');
+  row.className = 'component-row';
+  row.draggable = true;
+  row.dataset.index = index;
+  row.dataset.side  = side;
+
+  const lbl = document.createElement('span');
+  lbl.className = 'row-label';
+  lbl.textContent = comp.label;
+
+  const del = document.createElement('span');
+  del.className = 'delete-btn';
+  del.textContent = '\u{1F5D1}';
+  del.title = 'Remove';
+  del.addEventListener('click', e => { e.stopPropagation(); removeComponent(index, side); });
+
+  row.appendChild(lbl);
+  row.appendChild(del);
+  return row;
 }
 
 function setSumValue(id, value) {
@@ -1106,28 +1373,26 @@ function setSumValue(id, value) {
 function updateSummary() {
   const size     = getModelSize();
   const dims     = getAHUDimensions();
-  const hasComps = ahuComponents.length > 0;
+  const hasComps = (ahuComponents.length + returnComponents.length) > 0;
 
   setSumValue('sum-model-size', size ?? '\u2014');
   setSumValue('sum-cfm',        cfm ? cfm.toLocaleString() : '\u2014');
   setSumValue('sum-tsp',        hasComps ? `${getTSP().toFixed(2)} in.w.g.` : '\u2014');
   setSumValue('sum-dimensions', hasComps
-    ? `${dims.length}" L \xD7 ${dims.width}" W \xD7 ${dims.height}" H` : '\u2014');
+    ? `${dims.length}" L \xd7 ${dims.width}" W \xd7 ${dims.height}" H` : '\u2014');
   setSumValue('sum-weight',     hasComps ? `${getAHUWeight().toLocaleString()} lb` : '\u2014');
   setSumValue('sum-bhp',        (hasComps && cfm) ? getBHP().toFixed(3) : '\u2014');
 }
 
-// ── Build Dropdowns ───────────────────────────────────────────
+// ── Build Dropdowns ───────────────────────────────────────────────────────────────
 function buildDropdowns() {
   const wrapper = document.getElementById('dropdowns-wrapper');
   wrapper.innerHTML = '';
 
-  // Base categories
   BASE_CATEGORIES.forEach(cat => {
     wrapper.appendChild(buildCategoryDetails(cat.name, cat.items, false));
   });
 
-  // Custom components section
   const customItems = customComponents.map(cc => ({
     label: cc.label,
     key:   cc.key,
@@ -1138,7 +1403,6 @@ function buildDropdowns() {
   customDetails.open = true;
   wrapper.appendChild(customDetails);
 
-  // "Add custom component" button inside the custom section
   const addBtn = document.createElement('button');
   addBtn.id = 'add-custom-btn';
   addBtn.textContent = '+ Add Custom Component';
@@ -1313,24 +1577,32 @@ function deleteCustomComponent(key) {
 
 // ── Visual Drag & Drop ────────────────────────────────────────
 let visualDragSrcIndex = null;
+let visualDragSrcSide  = 'supply';
 
 function clearVisualIndicators() {
   document.querySelectorAll('.visual-component').forEach(el =>
     el.classList.remove('drag-over-left', 'drag-over-right')
   );
+  document.querySelectorAll('.tunnel-row').forEach(el =>
+    el.classList.remove('drag-row-target')
+  );
 }
 
 function onVisualDragStart(e) {
   visualDragSrcIndex = parseInt(e.currentTarget.dataset.index);
+  visualDragSrcSide  = e.currentTarget.dataset.side || 'supply';
   e.currentTarget.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', 'visual');
+  // Also select the tunnel being dragged from
+  if (tunnelMode === 'dual') selectTunnel(visualDragSrcSide);
 }
 
 function onVisualDragEnd(e) {
   e.currentTarget.classList.remove('dragging');
   clearVisualIndicators();
   visualDragSrcIndex = null;
+  visualDragSrcSide  = 'supply';
 }
 
 function onVisualItemDragOver(e) {
@@ -1338,9 +1610,18 @@ function onVisualItemDragOver(e) {
   e.stopPropagation();
   e.dataTransfer.dropEffect = 'move';
   clearVisualIndicators();
-  const target = e.currentTarget;
-  const rect = target.getBoundingClientRect();
-  target.classList.add(e.clientX < rect.left + rect.width / 2 ? 'drag-over-left' : 'drag-over-right');
+  const target     = e.currentTarget;
+  const targetSide = target.dataset.side || 'supply';
+
+  if (tunnelMode === 'dual' && visualDragSrcSide !== targetSide) {
+    // Cross-row: highlight the target tunnel row
+    const targetRow = document.getElementById(`tunnel-${targetSide}-row`);
+    if (targetRow) targetRow.classList.add('drag-row-target');
+  } else {
+    // Same row: left/right slot indicator
+    const rect = target.getBoundingClientRect();
+    target.classList.add(e.clientX < rect.left + rect.width / 2 ? 'drag-over-left' : 'drag-over-right');
+  }
 }
 
 function onVisualItemDragLeave(e) {
@@ -1352,22 +1633,70 @@ function onVisualItemDrop(e) {
   e.stopPropagation();
   const target      = e.currentTarget;
   const targetIndex = parseInt(target.dataset.index);
+  const targetSide  = target.dataset.side || 'supply';
   const rect        = target.getBoundingClientRect();
   const dropIndex   = e.clientX < rect.left + rect.width / 2 ? targetIndex : targetIndex + 1;
   clearVisualIndicators();
-  if (visualDragSrcIndex !== null && visualDragSrcIndex !== dropIndex) {
-    moveComponent(visualDragSrcIndex, dropIndex);
-    updateDisplay();
+
+  if (visualDragSrcIndex !== null) {
+    if (visualDragSrcSide === targetSide) {
+      if (visualDragSrcIndex !== dropIndex) {
+        moveComponent(visualDragSrcIndex, dropIndex, targetSide);
+        updateDisplay();
+      }
+    } else {
+      moveComponentBetweenRows(visualDragSrcIndex, visualDragSrcSide, dropIndex, targetSide);
+      updateDisplay();
+    }
   }
   visualDragSrcIndex = null;
+  visualDragSrcSide  = 'supply';
+}
+
+// Drag over/drop onto a tunnel row's content area (empty space or between components)
+function onTunnelRowDragOver(e, side) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+  clearVisualIndicators();
+  if (visualDragSrcSide !== side) {
+    const row = document.getElementById(`tunnel-${side}-row`);
+    if (row) row.classList.add('drag-row-target');
+  }
+}
+
+function onTunnelRowDragLeave(e, side) {
+  const row = document.getElementById(`tunnel-${side}-row`);
+  if (row && !row.contains(e.relatedTarget)) row.classList.remove('drag-row-target');
+}
+
+function onTunnelRowDrop(e, side) {
+  e.preventDefault();
+  e.stopPropagation();
+  clearVisualIndicators();
+  if (visualDragSrcIndex === null) return;
+
+  const components = side === 'return' ? returnComponents : ahuComponents;
+  const dropIndex  = components.length; // drop at end when landing on empty space
+
+  if (visualDragSrcSide === side) {
+    moveComponent(visualDragSrcIndex, dropIndex, side);
+  } else {
+    moveComponentBetweenRows(visualDragSrcIndex, visualDragSrcSide, dropIndex, side);
+  }
+  updateDisplay();
+  visualDragSrcIndex = null;
+  visualDragSrcSide  = 'supply';
 }
 
 function onContainerDragOver(e) {
+  if (tunnelMode === 'dual') return;
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
 }
 
 function onContainerDrop(e) {
+  if (tunnelMode === 'dual') return;
   e.preventDefault();
   clearVisualIndicators();
   if (visualDragSrcIndex !== null) {
@@ -1375,10 +1704,12 @@ function onContainerDrop(e) {
     updateDisplay();
   }
   visualDragSrcIndex = null;
+  visualDragSrcSide  = 'supply';
 }
 
 // ── List Drag & Drop ──────────────────────────────────────────
 let listDragSrcIndex = null;
+let listDragSrcSide  = 'supply';
 
 function clearListIndicators() {
   document.querySelectorAll('.component-row').forEach(el =>
@@ -1388,6 +1719,7 @@ function clearListIndicators() {
 
 function onListDragStart(e) {
   listDragSrcIndex = parseInt(e.currentTarget.dataset.index);
+  listDragSrcSide  = e.currentTarget.dataset.side || 'supply';
   e.currentTarget.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', 'list');
@@ -1397,8 +1729,10 @@ function onListDragEnd(e) {
   e.currentTarget.classList.remove('dragging');
   clearListIndicators();
   listDragSrcIndex = null;
+  listDragSrcSide  = 'supply';
 }
 
+// Single-mode list handlers (bound to #component-list via HTML attribute)
 function onListDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
@@ -1428,10 +1762,56 @@ function onListDrop(e) {
     dropIndex = e.clientY < rect.top + rect.height / 2 ? targetIndex : targetIndex + 1;
   }
   if (listDragSrcIndex !== dropIndex) {
-    moveComponent(listDragSrcIndex, dropIndex);
+    moveComponent(listDragSrcIndex, dropIndex, 'supply');
     updateDisplay();
   }
   listDragSrcIndex = null;
+  listDragSrcSide  = 'supply';
+}
+
+// Dual-mode per-column list handlers
+function onColListDragOver(e, side) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  clearListIndicators();
+  const target = e.target.closest('.component-row');
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    target.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-top' : 'drag-over-bottom');
+  }
+}
+
+function onColListDragLeave(e, colEl) {
+  if (!colEl.contains(e.relatedTarget)) clearListIndicators();
+}
+
+function onColListDrop(e, side) {
+  e.preventDefault();
+  clearListIndicators();
+  if (listDragSrcIndex === null) return;
+
+  const components = side === 'return' ? returnComponents : ahuComponents;
+  const target = e.target.closest('.component-row');
+  let dropIndex;
+  if (!target) {
+    dropIndex = components.length;
+  } else {
+    const targetIndex = parseInt(target.dataset.index);
+    const rect = target.getBoundingClientRect();
+    dropIndex = e.clientY < rect.top + rect.height / 2 ? targetIndex : targetIndex + 1;
+  }
+
+  if (listDragSrcSide === side) {
+    if (listDragSrcIndex !== dropIndex) {
+      moveComponent(listDragSrcIndex, dropIndex, side);
+      updateDisplay();
+    }
+  } else {
+    moveComponentBetweenRows(listDragSrcIndex, listDragSrcSide, dropIndex, side);
+    updateDisplay();
+  }
+  listDragSrcIndex = null;
+  listDragSrcSide  = 'supply';
 }
 
 // ── Input Handlers ────────────────────────────────────────────
