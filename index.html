@@ -869,6 +869,87 @@
       font-weight: 600;
       color: var(--sum-value);
     }
+
+    /* ── TSP Info Button & Popup ────────────────────────────── */
+    .tsp-info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1.5px solid var(--sum-label);
+      color: var(--sum-label);
+      font-size: 9px;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+      margin-left: 5px;
+      vertical-align: middle;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+      line-height: 1;
+      position: relative;
+      top: -1px;
+    }
+    .tsp-info-btn:hover {
+      border-color: #60a5fa;
+      color: #60a5fa;
+    }
+
+    #tsp-popup {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: var(--bg-sidebar);
+      border: 1px solid var(--sum-hdr-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+      padding: 12px 14px;
+      min-width: 260px;
+    }
+    #tsp-popup.open { display: block; }
+    #tsp-popup h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--sum-label);
+      margin: 0 0 8px;
+    }
+    #tsp-popup table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    #tsp-popup th {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--sum-label);
+      text-align: left;
+      padding: 0 0 5px;
+      border-bottom: 1px solid var(--sum-hdr-border);
+    }
+    #tsp-popup th:last-child { text-align: right; }
+    #tsp-popup td {
+      padding: 5px 0;
+      color: var(--text-body);
+      border-bottom: 1px solid var(--sum-divider);
+    }
+    #tsp-popup td:last-child { text-align: right; font-weight: 600; }
+    #tsp-popup tr:last-child td { border-bottom: none; }
+    #tsp-popup .popup-total {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px solid var(--sum-hdr-border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sum-value);
+    }
   </style>
   <script>
     (function() {
@@ -949,13 +1030,28 @@
         </div>
         <div class="summary-field" id="sum-model-size"><span class="sum-label">Model Size</span><span class="sum-value">—</span></div>
         <div class="summary-field" id="sum-cfm"><span class="sum-label">CFM</span><span class="sum-value">—</span></div>
-        <div class="summary-field" id="sum-tsp"><span class="sum-label">TSP</span><span class="sum-value">—</span></div>
+        <div class="summary-field" id="sum-tsp">
+          <span class="sum-label">TSP<span class="tsp-info-btn" id="tsp-info-btn" onclick="showTspPopup(event)">i</span></span>
+          <span class="sum-value">—</span>
+        </div>
         <div class="summary-field" id="sum-dimensions"><span class="sum-label">Overall Dimensions</span><span class="sum-value">—</span></div>
         <div class="summary-field" id="sum-weight"><span class="sum-label">Total Weight</span><span class="sum-value">—</span></div>
         <div class="summary-field" id="sum-bhp"><span class="sum-label">BHP</span><span class="sum-value">—</span></div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── TSP Breakdown Popup ──────────────────────────────────── -->
+<div id="tsp-popup">
+  <h4>TSP Breakdown</h4>
+  <table>
+    <thead>
+      <tr><th>Component</th><th>ISP (in.w.g.)</th></tr>
+    </thead>
+    <tbody id="tsp-popup-body"></tbody>
+  </table>
+  <div class="popup-total"><span>Total TSP</span><span id="tsp-popup-total">—</span></div>
 </div>
 
 <!-- ── Add Custom Component Modal ────────────────────────────── -->
@@ -1823,6 +1919,44 @@ document.getElementById('cfm-entry').addEventListener('input', function () {
 document.getElementById('esp-entry').addEventListener('input', function () {
   esp = parseFloat(this.value) || 0;
   updateSummary();
+});
+
+// ── TSP Info Popup ────────────────────────────────────────────
+function showTspPopup(e) {
+  e.stopPropagation();
+  const popup = document.getElementById('tsp-popup');
+  const tbody = document.getElementById('tsp-popup-body');
+
+  // Build rows: one per supply component + external static pressure
+  tbody.innerHTML = '';
+  const rows = [...ahuComponents.map(c => ({ label: c.label || c.name, isp: c.data.isp }))];
+  rows.push({ label: 'External Static Pressure', isp: esp });
+
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.label}</td><td>${r.isp.toFixed(2)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('tsp-popup-total').textContent = getTSP().toFixed(2) + ' in.w.g.';
+
+  // Position near the (i) button
+  const btn = document.getElementById('tsp-info-btn');
+  const rect = btn.getBoundingClientRect();
+  popup.style.top  = (rect.bottom + 6) + 'px';
+  popup.style.left = Math.max(8, rect.left - 220) + 'px';
+  popup.classList.add('open');
+}
+
+function closeTspPopup() {
+  document.getElementById('tsp-popup').classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+  const popup = document.getElementById('tsp-popup');
+  if (popup.classList.contains('open') && !popup.contains(e.target)) {
+    closeTspPopup();
+  }
 });
 
 // ── Theme Toggle ──────────────────────────────────────────────
