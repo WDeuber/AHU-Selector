@@ -965,6 +965,31 @@
       font-weight: 700;
       color: var(--sum-value);
     }
+
+    /* ── Light mode overrides for TSP popup ─────────────────── */
+    [data-theme="light"] #tsp-popup {
+      background: #ffffff;
+      border-color: #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    [data-theme="light"] #tsp-popup h4 { color: #64748b; }
+    [data-theme="light"] #tsp-popup th {
+      color: #64748b;
+      border-bottom-color: #e2e8f0;
+    }
+    [data-theme="light"] #tsp-popup td {
+      color: #334155;
+      border-bottom-color: #f1f5f9;
+    }
+    [data-theme="light"] #tsp-popup .popup-section-header {
+      color: #60a5fa;
+      border-bottom-color: #e2e8f0;
+    }
+    [data-theme="light"] #tsp-popup .popup-empty { color: #94a3b8; }
+    [data-theme="light"] #tsp-popup .popup-total {
+      border-top-color: #e2e8f0;
+      color: #0f172a;
+    }
   </style>
   <script>
     (function() {
