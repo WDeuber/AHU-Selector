@@ -633,8 +633,14 @@ class AHUGUI:
             btn.bind("<ButtonRelease-1>", self._end_image_drag)
 
     def _build_dual_tunnel_visual(self):
+        # Spacers above and below the tunnel rows vertically center them
+        tk.Frame(self.image_container, bg="white").pack(side="top", fill="both", expand=True)
+
+        center_frame = tk.Frame(self.image_container, bg="white")
+        center_frame.pack(side="top", fill="x", padx=8)
+
         # Return row (top)
-        self.return_wrapper = tk.Frame(self.image_container, bd=1, relief="groove")
+        self.return_wrapper = tk.Frame(center_frame, bd=1, relief="groove")
         self.return_wrapper.pack(fill="x", pady=(0, 4))
 
         return_label = tk.Label(
@@ -672,7 +678,7 @@ class AHUGUI:
             btn.bind("<ButtonRelease-1>", self._end_image_drag)
 
         # Supply row (bottom)
-        self.supply_wrapper = tk.Frame(self.image_container, bd=1, relief="groove")
+        self.supply_wrapper = tk.Frame(center_frame, bd=1, relief="groove")
         self.supply_wrapper.pack(fill="x", pady=(4, 0))
 
         supply_label = tk.Label(
@@ -717,6 +723,8 @@ class AHUGUI:
 
         # Apply initial highlight
         self._update_tunnel_highlights()
+
+        tk.Frame(self.image_container, bg="white").pack(side="top", fill="both", expand=True)
 
     def get_component_image(self, component_name):
         try:
