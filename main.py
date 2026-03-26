@@ -51,30 +51,46 @@ class AHU:
 
     def __init__(self,component_source, cfm=0, esp=0):
         self.component_source = component_source        # component_source as ahu_components json file
-        self.components = []
+        self.components = []            # supply components
+        self.return_components = []     # return components (dual tunnel only)
+        self.tunnel_mode = "single"     # "single" or "dual"
         self.cfm = cfm
         self.esp = esp
 
-    def add_component(self,name,size):
-        comp = AHUComponent(self.component_source,name,size)
-        self.components.append(comp)
+    def add_component(self, name, size, side="supply"):
+        comp = AHUComponent(self.component_source, name, size)
+        if side == "return" and self.tunnel_mode == "dual":
+            self.return_components.append(comp)
+        else:
+            self.components.append(comp)
 
-    def remove_component(self, index):
-        if 0 <= index < len(self.components):
-            self.components.pop(index)
+    def remove_component(self, index, side="supply"):
+        lst = self.return_components if side == "return" else self.components
+        if 0 <= index < len(lst):
+            lst.pop(index)
 
-    def move_component(self, from_index, to_index):
+    def move_component(self, from_index, to_index, side="supply"):
+        lst = self.return_components if side == "return" else self.components
         if from_index == to_index:
             return
-        if from_index < 0 or from_index >= len(self.components):
+        if from_index < 0 or from_index >= len(lst):
             return
-        if to_index < 0 or to_index > len(self.components):
+        if to_index < 0 or to_index > len(lst):
             return
         if from_index < to_index:
             to_index -= 1
 
-        component = self.components.pop(from_index)
-        self.components.insert(to_index, component)
+        component = lst.pop(from_index)
+        lst.insert(to_index, component)
+
+    def move_component_between_rows(self, from_index, from_side, to_index, to_side):
+        src = self.return_components if from_side == "return" else self.components
+        dst = self.return_components if to_side == "return" else self.components
+        if from_index < 0 or from_index >= len(src):
+            return
+        component = src.pop(from_index)
+        to_index = min(to_index, len(dst))
+        dst.insert(to_index, component)
 
     def size_from_cfm(self):
         if self.cfm == 0:
@@ -94,17 +110,20 @@ class AHU:
         return sum(c.length for c in self.components)
     @property
     def weight(self):
-        return sum(c.weight for c in self.components)
+        supply_weight = sum(c.weight for c in self.components)
+        return_weight = sum(c.weight for c in self.return_components)
+        return supply_weight + return_weight
     @property
     def dimensions(self):
+        all_comps = self.components + self.return_components
         return {
             "length": self.length,
-            "width": max((c.dimensions["width"] for c in self.components), default=0),
-            "height": max((c.dimensions["height"] for c in self.components), default=0)
+            "width": max((c.dimensions["width"] for c in all_comps), default=0),
+            "height": max((c.dimensions["height"] for c in all_comps), default=0)
         }
     @property
     def count(self):
-        return len(self.components)
+        return len(self.components) + len(self.return_components)
     @property
     def isp(self):
         return sum(c.isp for c in self.components)
@@ -223,10 +242,11 @@ class ComponentRow(tk.Frame):
         print("Button Clicked")
 
 class ComponentList(tk.Frame):
-    def __init__(self, parent, ahu, on_change):
+    def __init__(self, parent, ahu, on_change, side="supply"):
         super().__init__(parent)
         self.ahu = ahu
         self.on_change = on_change
+        self.side = side
         self.rows = []
 
         self.drag_row = None
@@ -255,14 +275,15 @@ class ComponentList(tk.Frame):
             row.destroy()
         self.rows.clear()
 
-        for comp in self.ahu.components:
+        components = self.ahu.return_components if self.side == "return" else self.ahu.components
+        for comp in components:
             row = ComponentRow(self.list_frame, comp, self.on_delete, self.handle_drag)
             self.rows.append(row)
 
     def on_delete(self, row):
         print("Delete Button Pressed")
         index = self.rows.index(row)
-        self.ahu.remove_component(index)
+        self.ahu.remove_component(index, side=self.side)
         self.on_change()
 
     def show_drag_indicator(self, y):
@@ -299,7 +320,7 @@ class ComponentList(tk.Frame):
         elif action == "end":
             self.list_drag_indicator.place_forget()
             if self.drag_index is not None and self.drag_target is not None:
-                self.ahu.move_component(self.drag_index, self.drag_target)
+                self.ahu.move_component(self.drag_index, self.drag_target, side=self.side)
 
             self.drag_row = None
             self.drag_index = None
@@ -341,8 +362,19 @@ class AHUGUI:
         # Image drag states
         self.dragged_image = None
         self.drag_start_index = None
+        self.drag_start_side = "supply"
         self.drag_target_index = None
+        self.drag_target_side = "supply"
         self.visual_drag_indicator = None
+
+        # References to display frames and wrappers for dual tunnel
+        self.supply_display = None
+        self.return_display = None
+        self.supply_wrapper = None
+        self.return_wrapper = None
+
+        # Which tunnel is active for adding new components
+        self.selected_tunnel = "supply"
 
     def update_cfm(self):
         try:
@@ -372,6 +404,50 @@ class AHUGUI:
 
         self.build_cfm_input(left_half)
         self.build_esp_input(right_half)
+
+        # Tunnel mode selector
+        tunnel_row = tk.Frame(self.left_frame, bg="#F5F5F5")
+        tunnel_row.pack(fill="x", padx=10, pady=(0, 8))
+
+        tk.Label(tunnel_row, text="Tunnel Type:", font=("Arial", 10), bg="#F5F5F5").pack(side="left", padx=(0, 8))
+
+        self.tunnel_var = tk.StringVar(value="Single Tunnel")
+        tunnel_options = ["Single Tunnel", "Dual Tunnel"]
+        tunnel_menu = tk.OptionMenu(tunnel_row, self.tunnel_var, *tunnel_options, command=self.on_tunnel_change)
+        tunnel_menu.config(width=14)
+        tunnel_menu.pack(side="left")
+
+    def on_tunnel_change(self, value):
+        new_mode = "dual" if value == "Dual Tunnel" else "single"
+        if new_mode == self.ahu.tunnel_mode:
+            return
+        self.ahu.tunnel_mode = new_mode
+        if new_mode == "single":
+            self.ahu.return_components = []
+            self.selected_tunnel = "supply"
+        # Rebuild list area to reflect new layout
+        self.build_list_area()
+        self.update_visual_area()
+        self.update_summary_area()
+
+    def select_tunnel(self, side):
+        self.selected_tunnel = side
+        self._update_tunnel_highlights()
+
+    def _update_tunnel_highlights(self):
+        if not self.return_wrapper or not self.supply_wrapper:
+            return
+        selected_bg = "#D6EAFF"
+        normal_bg = "#F0F0F0"
+        for wrapper, wrapper_side in (
+            (self.return_wrapper, "return"),
+            (self.supply_wrapper, "supply"),
+        ):
+            bg = selected_bg if self.selected_tunnel == wrapper_side else normal_bg
+            wrapper.config(bg=bg)
+            for child in wrapper.winfo_children():
+                if isinstance(child, tk.Label):
+                    child.config(bg=bg)
 
     def build_cfm_input(self, parent):
         frame = tk.Frame(parent, bg="#F5F5F5")
@@ -522,7 +598,17 @@ class AHUGUI:
     def update_visual_area(self):
         for widget in self.image_container.winfo_children():
             widget.destroy()
+        self.supply_display = None
+        self.return_display = None
+        self.supply_wrapper = None
+        self.return_wrapper = None
 
+        if self.ahu.tunnel_mode == "dual":
+            self._build_dual_tunnel_visual()
+        else:
+            self._build_single_tunnel_visual()
+
+    def _build_single_tunnel_visual(self):
         for index, comp in enumerate(self.ahu.components):
             img = self.get_component_image(comp)
 
@@ -541,10 +627,96 @@ class AHUGUI:
             btn.pack(side="left", padx=5)
 
             btn.drag_index = index
+            btn.drag_side = "supply"
             btn.bind("<Button-1>", self._start_image_drag)
             btn.bind("<B1-Motion>", self._on_image_drag)
             btn.bind("<ButtonRelease-1>", self._end_image_drag)
 
+    def _build_dual_tunnel_visual(self):
+        # Return row (top)
+        self.return_wrapper = tk.Frame(self.image_container, bd=1, relief="groove")
+        self.return_wrapper.pack(fill="x", pady=(0, 4))
+
+        return_label = tk.Label(
+            self.return_wrapper,
+            text="Return",
+            font=("Arial", 10, "bold"),
+            width=7,
+            anchor="center"
+        )
+        return_label.pack(side="left", padx=6, pady=4)
+
+        self.return_display = tk.Frame(self.return_wrapper, bg="white", height=130)
+        self.return_display.pack_propagate(False)   # keep height even when empty
+        self.return_display.pack(side="left", fill="both", expand=True, padx=4, pady=4)
+
+        for index, comp in enumerate(self.ahu.return_components):
+            img = self.get_component_image(comp)
+            btn = tk.Label(
+                self.return_display,
+                image=img,
+                text=f"{comp.label}\nSize {comp.size}",
+                compound="top",
+                bg="white",
+                relief="solid",
+                borderwidth=1,
+                padx=5,
+                pady=5
+            )
+            btn.image = img
+            btn.pack(side="left", padx=5)
+            btn.drag_index = index
+            btn.drag_side = "return"
+            btn.bind("<Button-1>", self._start_image_drag)
+            btn.bind("<B1-Motion>", self._on_image_drag)
+            btn.bind("<ButtonRelease-1>", self._end_image_drag)
+
+        # Supply row (bottom)
+        self.supply_wrapper = tk.Frame(self.image_container, bd=1, relief="groove")
+        self.supply_wrapper.pack(fill="x", pady=(4, 0))
+
+        supply_label = tk.Label(
+            self.supply_wrapper,
+            text="Supply",
+            font=("Arial", 10, "bold"),
+            width=7,
+            anchor="center"
+        )
+        supply_label.pack(side="left", padx=6, pady=4)
+
+        self.supply_display = tk.Frame(self.supply_wrapper, bg="white", height=130)
+        self.supply_display.pack_propagate(False)   # keep height even when empty
+        self.supply_display.pack(side="left", fill="both", expand=True, padx=4, pady=4)
+
+        for index, comp in enumerate(self.ahu.components):
+            img = self.get_component_image(comp)
+            btn = tk.Label(
+                self.supply_display,
+                image=img,
+                text=f"{comp.label}\nSize {comp.size}",
+                compound="top",
+                bg="white",
+                relief="solid",
+                borderwidth=1,
+                padx=5,
+                pady=5
+            )
+            btn.image = img
+            btn.pack(side="left", padx=5)
+            btn.drag_index = index
+            btn.drag_side = "supply"
+            btn.bind("<Button-1>", self._start_image_drag)
+            btn.bind("<B1-Motion>", self._on_image_drag)
+            btn.bind("<ButtonRelease-1>", self._end_image_drag)
+
+        # Bind click-to-select on wrappers, labels, and display frames
+        for widget in (self.return_wrapper, return_label, self.return_display):
+            widget.bind("<Button-1>", lambda e: self.select_tunnel("return"))
+        for widget in (self.supply_wrapper, supply_label, self.supply_display):
+            widget.bind("<Button-1>", lambda e: self.select_tunnel("supply"))
+
+        # Apply initial highlight
+        self._update_tunnel_highlights()
 
     def get_component_image(self, component_name):
         try:
@@ -553,60 +725,104 @@ class AHUGUI:
         except:
             return None
 
-    def _get_visual_slots(self):
-        # Returns list of valid x positions for indicator slots
-        widgets = self.image_container.winfo_children()
-
-        slots = []
-
+    def _get_visual_slots_for(self, frame):
+        widgets = frame.winfo_children()
         if not widgets:
             return [0]
-
-        slots.append(widgets[0].winfo_x())  # slot before first
-        for w in widgets:                   # slots between widgets
+        slots = [widgets[0].winfo_x()]
+        for w in widgets:
             slots.append(w.winfo_x() + w.winfo_width())
-
         return slots
+
+    def _get_visual_slots(self):
+        return self._get_visual_slots_for(self.image_container)
 
     def _start_image_drag(self, event):
         lbl = event.widget
         self.dragged_image = lbl
         self.drag_start_index = lbl.drag_index
+        self.drag_start_side = lbl.drag_side
+        self.drag_target_side = lbl.drag_side
+        # Clicking a component also selects that tunnel
+        if self.ahu.tunnel_mode == "dual":
+            self.select_tunnel(lbl.drag_side)
 
-        # Initialize drag indicator
         self.visual_drag_indicator = tk.Frame(
             self.visual_frame,
             width=4,
-            height=lbl.winfo_height()-6,
+            height=lbl.winfo_height() - 6,
             bg="#4a90e2"
         )
 
     def _on_image_drag(self, event):
-        # Mouse X relative to visual_frame
-        mouse_x = event.x_root - self.visual_frame.winfo_rootx()
+        if self.ahu.tunnel_mode == "dual" and self.return_display and self.supply_display:
+            # Determine which row the mouse is over
+            mouse_y_root = event.y_root
+            return_top = self.return_display.winfo_rooty()
+            return_bottom = return_top + self.return_display.winfo_height()
+            supply_top = self.supply_display.winfo_rooty()
+            supply_bottom = supply_top + self.supply_display.winfo_height()
 
-        slots = self._get_visual_slots()
+            # Pick the closer row based on mouse position
+            dist_return = min(abs(mouse_y_root - return_top), abs(mouse_y_root - return_bottom))
+            dist_supply = min(abs(mouse_y_root - supply_top), abs(mouse_y_root - supply_bottom))
 
-        #Find nearest slot
-        nearest_index = min(
-            range(len(slots)),
-            key=lambda i: abs(slots[i] - mouse_x)
-        )
+            if return_top <= mouse_y_root <= return_bottom:
+                target_display = self.return_display
+                self.drag_target_side = "return"
+            elif supply_top <= mouse_y_root <= supply_bottom:
+                target_display = self.supply_display
+                self.drag_target_side = "supply"
+            elif dist_return <= dist_supply:
+                target_display = self.return_display
+                self.drag_target_side = "return"
+            else:
+                target_display = self.supply_display
+                self.drag_target_side = "supply"
 
-        self.drag_target_index = nearest_index
+            mouse_x = event.x_root - target_display.winfo_rootx()
+            slots = self._get_visual_slots_for(target_display)
 
-        if nearest_index == 0:
-            self.visual_drag_indicator.place(x=slots[nearest_index] + 3,y=102)
+            nearest_index = min(range(len(slots)), key=lambda i: abs(slots[i] - mouse_x))
+            self.drag_target_index = nearest_index
+
+            # Place indicator relative to visual_frame
+            abs_x = target_display.winfo_rootx() - self.visual_frame.winfo_rootx()
+            abs_y = target_display.winfo_rooty() - self.visual_frame.winfo_rooty()
+            slot_x = abs_x + slots[nearest_index]
+            offset = 3 if nearest_index == 0 else 13
+            self.visual_drag_indicator.place(x=slot_x + offset, y=abs_y + 3)
         else:
-            self.visual_drag_indicator.place(x=slots[nearest_index] + 13, y=102)
+            mouse_x = event.x_root - self.visual_frame.winfo_rootx()
+            slots = self._get_visual_slots()
+            nearest_index = min(range(len(slots)), key=lambda i: abs(slots[i] - mouse_x))
+            self.drag_target_index = nearest_index
+            self.drag_target_side = "supply"
+
+            if nearest_index == 0:
+                self.visual_drag_indicator.place(x=slots[nearest_index] + 3, y=102)
+            else:
+                self.visual_drag_indicator.place(x=slots[nearest_index] + 13, y=102)
 
     def _end_image_drag(self, event):
         if (
             self.drag_start_index is not None
             and self.drag_target_index is not None
-            and self.drag_start_index != self.drag_target_index
         ):
-            self.ahu.move_component(self.drag_start_index, self.drag_target_index)
+            if self.drag_start_side == self.drag_target_side:
+                if self.drag_start_index != self.drag_target_index:
+                    self.ahu.move_component(
+                        self.drag_start_index,
+                        self.drag_target_index,
+                        side=self.drag_start_side
+                    )
+            else:
+                self.ahu.move_component_between_rows(
+                    self.drag_start_index,
+                    self.drag_start_side,
+                    self.drag_target_index,
+                    self.drag_target_side
+                )
 
             self.update_display()
 
@@ -615,7 +831,9 @@ class AHUGUI:
 
         self.dragged_image = None
         self.drag_start_index = None
+        self.drag_start_side = "supply"
         self.drag_target_index = None
+        self.drag_target_side = "supply"
 
 
     def build_bottom_area(self):
@@ -629,6 +847,13 @@ class AHUGUI:
         self.build_summary_area()       # Summary
 
     def build_list_area(self):
+        # Clear existing list area content
+        for widget in self.list_frame.winfo_children():
+            widget.destroy()
+        self.component_list = None
+        self.supply_component_list = None
+        self.return_component_list = None
+
         title = tk.Label(
             self.list_frame,
             text="Components Included",
@@ -637,8 +862,58 @@ class AHUGUI:
         )
         title.pack(anchor="center", padx=8, pady=4)
 
-        self.component_list = ComponentList(parent=self.list_frame, ahu=self.ahu, on_change=self.update_display)
-        self.component_list.pack(fill="both", expand=True)
+        if self.ahu.tunnel_mode == "dual":
+            dual_frame = tk.Frame(self.list_frame, bg="#E8E8E8")
+            dual_frame.pack(fill="both", expand=True)
+
+            # Return side (left column)
+            return_col = tk.Frame(dual_frame, bg="#E8E8E8", bd=1, relief="groove")
+            return_col.pack(side="left", fill="both", expand=True, padx=(0, 2), pady=2)
+
+            tk.Label(
+                return_col,
+                text="Return",
+                font=("Arial", 11, "bold"),
+                bg="#E8E8E8"
+            ).pack(anchor="center", pady=(4, 2))
+
+            self.return_component_list = ComponentList(
+                parent=return_col,
+                ahu=self.ahu,
+                on_change=self.update_display,
+                side="return"
+            )
+            self.return_component_list.pack(fill="both", expand=True)
+            self.return_component_list.refresh()
+
+            # Supply side (right column)
+            supply_col = tk.Frame(dual_frame, bg="#E8E8E8", bd=1, relief="groove")
+            supply_col.pack(side="right", fill="both", expand=True, padx=(2, 0), pady=2)
+
+            tk.Label(
+                supply_col,
+                text="Supply",
+                font=("Arial", 11, "bold"),
+                bg="#E8E8E8"
+            ).pack(anchor="center", pady=(4, 2))
+
+            self.supply_component_list = ComponentList(
+                parent=supply_col,
+                ahu=self.ahu,
+                on_change=self.update_display,
+                side="supply"
+            )
+            self.supply_component_list.pack(fill="both", expand=True)
+            self.supply_component_list.refresh()
+        else:
+            self.component_list = ComponentList(
+                parent=self.list_frame,
+                ahu=self.ahu,
+                on_change=self.update_display,
+                side="supply"
+            )
+            self.component_list.pack(fill="both", expand=True)
+            self.component_list.refresh()
 
     def build_summary_area(self):
         title = tk.Label(
@@ -683,7 +958,7 @@ class AHUGUI:
         )
         dims = self.ahu.dimensions
         self.summary_labels["Overall Dimensions"].config(
-            text=f"Overall Dimensions: {dims['length']} L x {dims['width']} W x {dims['height']} H" #({round(dims['length']/12,1)}' x {round(dims['width']/12,1)}' x {round(dims['height']/12,1)}')"
+            text=f"Overall Dimensions: {dims['length']} L x {dims['width']} W x {dims['height']} H"
         )
         self.summary_labels["Total Weight"].config(
             text=f"Total Weight: {self.ahu.weight} lb"
@@ -692,14 +967,23 @@ class AHUGUI:
             text=f"BHP: {round(self.ahu.bhp,3)}"
         )
 
-
+    def refresh_component_lists(self):
+        if self.ahu.tunnel_mode == "dual":
+            if self.return_component_list:
+                self.return_component_list.refresh()
+            if self.supply_component_list:
+                self.supply_component_list.refresh()
+        else:
+            if self.component_list:
+                self.component_list.refresh()
 
     def update_display(self):
-        self.component_list.refresh()       # Update component list
+        self.refresh_component_lists()      # Update component list
         self.update_visual_area()           # Update component diagram
         self.update_summary_area()          # Update summary
         print("Display Updated!")
-        print("AHU Components: ", [c.name for c in self.ahu.components])
+        print("Supply Components: ", [c.name for c in self.ahu.components])
+        print("Return Components: ", [c.name for c in self.ahu.return_components])
 
     def handle_add_component(self, comp_name):
         size = self.ahu.model_size
@@ -707,11 +991,11 @@ class AHUGUI:
             print("Invalid CFM")
             return
         try:
-            self.ahu.add_component(comp_name, size)
+            side = self.selected_tunnel if self.ahu.tunnel_mode == "dual" else "supply"
+            self.ahu.add_component(comp_name, size, side=side)
             self.update_display()
         except KeyError:
             print(f"Size {size} not found for {comp_name}")
-
 
 
 
