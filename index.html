@@ -1526,12 +1526,12 @@ function makeVisualComp(comp, index, side) {
   if (comp.name === 'Heat_Coil' || comp.name === 'Cool_Coil') {
     const fpmLabel = `${comp.coilFpm || '500'} fpm`;
     const rowLabel = comp.name === 'Cool_Coil' ? ` / ${comp.coilRows || '4row'}` : '';
-    lbl.textContent = `${comp.label}\nSize ${comp.size}\n${fpmLabel}${rowLabel}`;
+    lbl.textContent = `${comp.label}\nPD: ${getCompISP(comp).toFixed(2)} in.wg\n${fpmLabel}${rowLabel}`;
     div.title = 'Click to change coil options';
     div.style.cursor = 'pointer';
     div.addEventListener('click', e => { e.stopPropagation(); showCoilPopup(e, comp, index, side); });
   } else {
-    lbl.textContent = `${comp.label}\nSize ${comp.size}`;
+    lbl.textContent = `${comp.label}\nPD: ${getCompISP(comp).toFixed(2)} in.wg`;
   }
 
   div.appendChild(img);
