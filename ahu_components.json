@@ -737,7 +737,8 @@
             },
             "weight": 125,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "60": {
             "dimensions": {
@@ -747,7 +748,8 @@
             },
             "weight": 140,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "85": {
             "dimensions": {
@@ -757,7 +759,8 @@
             },
             "weight": 160,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "105": {
             "dimensions": {
@@ -767,7 +770,8 @@
             },
             "weight": 180,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "125": {
             "dimensions": {
@@ -777,7 +781,8 @@
             },
             "weight": 195,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "155": {
             "dimensions": {
@@ -787,7 +792,8 @@
             },
             "weight": 300,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "180": {
             "dimensions": {
@@ -797,7 +803,8 @@
             },
             "weight": 310,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "200": {
             "dimensions": {
@@ -807,7 +814,8 @@
             },
             "weight": 320,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "240": {
             "dimensions": {
@@ -817,7 +825,8 @@
             },
             "weight": 350,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "300": {
             "dimensions": {
@@ -827,7 +836,8 @@
             },
             "weight": 400,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "350": {
             "dimensions": {
@@ -837,7 +847,8 @@
             },
             "weight": 420,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "400": {
             "dimensions": {
@@ -847,7 +858,8 @@
             },
             "weight": 430,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "450": {
             "dimensions": {
@@ -857,7 +869,8 @@
             },
             "weight": 500,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         },
         "500": {
             "dimensions": {
@@ -867,7 +880,8 @@
             },
             "weight": 600,
             "image": "images/Heat_Coil.png",
-            "isp": 0.15
+            "isp500": 0.15,
+            "isp350": 0.09
         }
     },
     "Integ_FBP_HC": {
@@ -1166,7 +1180,16 @@
             },
             "weight": 320,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "60": {
             "dimensions": {
@@ -1176,7 +1199,16 @@
             },
             "weight": 340,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "85": {
             "dimensions": {
@@ -1186,7 +1218,16 @@
             },
             "weight": 380,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "105": {
             "dimensions": {
@@ -1196,7 +1237,16 @@
             },
             "weight": 430,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "125": {
             "dimensions": {
@@ -1206,7 +1256,16 @@
             },
             "weight": 460,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "155": {
             "dimensions": {
@@ -1216,7 +1275,16 @@
             },
             "weight": 620,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "180": {
             "dimensions": {
@@ -1226,7 +1294,16 @@
             },
             "weight": 640,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "200": {
             "dimensions": {
@@ -1236,7 +1313,16 @@
             },
             "weight": 660,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "240": {
             "dimensions": {
@@ -1246,7 +1332,16 @@
             },
             "weight": 730,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "300": {
             "dimensions": {
@@ -1256,7 +1351,16 @@
             },
             "weight": 800,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "350": {
             "dimensions": {
@@ -1266,7 +1370,16 @@
             },
             "weight": 820,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "400": {
             "dimensions": {
@@ -1276,7 +1389,16 @@
             },
             "weight": 840,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "450": {
             "dimensions": {
@@ -1286,7 +1408,16 @@
             },
             "weight": 1000,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         },
         "500": {
             "dimensions": {
@@ -1296,7 +1427,16 @@
             },
             "weight": 1150,
             "image": "images/Cool_Coil.png",
-            "isp": 0.15
+            "isp350": {
+                "4row": 0.17,
+                "6row": 0.24,
+                "8row": 0.33
+            },
+            "isp500": {
+                "4row": 0.3,
+                "6row": 0.44,
+                "8row": 0.6
+            }
         }
     },
     "Conv_FBP_CC": {
