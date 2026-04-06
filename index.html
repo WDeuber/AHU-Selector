@@ -990,6 +990,61 @@
       border-top-color: #e2e8f0;
       color: #0f172a;
     }
+
+    /* ── Coil Options Popup ──────────────────────────────────── */
+    #coil-popup {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: var(--bg-sidebar);
+      border: 1px solid var(--sum-hdr-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+      padding: 12px 14px;
+      min-width: 160px;
+    }
+    #coil-popup.open { display: block; }
+    #coil-popup h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--sum-label);
+      margin: 0 0 10px;
+    }
+    .coil-popup-section { margin-bottom: 8px; }
+    .coil-popup-section:last-child { margin-bottom: 0; }
+    .coil-popup-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #60a5fa;
+      margin-bottom: 5px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid var(--sum-hdr-border);
+    }
+    .coil-popup-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-body);
+      padding: 3px 0;
+      cursor: pointer;
+    }
+    .coil-popup-option input[type="radio"] { cursor: pointer; }
+    [data-theme="light"] #coil-popup {
+      background: #ffffff;
+      border-color: #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    [data-theme="light"] #coil-popup h4 { color: #64748b; }
+    [data-theme="light"] .coil-popup-section-label {
+      color: #60a5fa;
+      border-bottom-color: #e2e8f0;
+    }
+    [data-theme="light"] .coil-popup-option { color: #334155; }
   </style>
   <script>
     (function() {
@@ -1092,6 +1147,32 @@
     <tbody id="tsp-popup-body"></tbody>
   </table>
   <div class="popup-total"><span>Total TSP</span><span id="tsp-popup-total">—</span></div>
+</div>
+
+<!-- ── Coil Options Popup ────────────────────────────────────── -->
+<div id="coil-popup">
+  <h4>Coil Options</h4>
+  <div class="coil-popup-section">
+    <div class="coil-popup-section-label">Face Velocity</div>
+    <label class="coil-popup-option">
+      <input type="radio" name="coil-fpm" value="500"> 500 fpm
+    </label>
+    <label class="coil-popup-option">
+      <input type="radio" name="coil-fpm" value="350"> 350 fpm
+    </label>
+  </div>
+  <div id="coil-rows-section" class="coil-popup-section" style="display:none">
+    <div class="coil-popup-section-label">Rows</div>
+    <label class="coil-popup-option">
+      <input type="radio" name="coil-rows" value="4row"> 4 rows
+    </label>
+    <label class="coil-popup-option">
+      <input type="radio" name="coil-rows" value="6row"> 6 rows
+    </label>
+    <label class="coil-popup-option">
+      <input type="radio" name="coil-rows" value="8row"> 8 rows
+    </label>
+  </div>
 </div>
 
 <!-- ── Add Custom Component Modal ────────────────────────────── -->
@@ -1264,7 +1345,21 @@ function getModelSize()  { return sizeFromCFM(cfm); }
 function getAHUWeight()  {
   return [...ahuComponents, ...returnComponents].reduce((s, c) => s + c.data.weight, 0);
 }
-function getISP()        { return ahuComponents.reduce((s, c) => s + c.data.isp, 0); }
+function getCompISP(comp) {
+  const data = comp.data;
+  if (comp.name === 'Heat_Coil') {
+    const key = comp.coilFpm === '350' ? 'isp350' : 'isp500';
+    return data[key] ?? data.isp ?? 0;
+  }
+  if (comp.name === 'Cool_Coil') {
+    const fpmKey = comp.coilFpm === '350' ? 'isp350' : 'isp500';
+    const rowKey = comp.coilRows || '4row';
+    const fpmData = data[fpmKey];
+    return (fpmData && fpmData[rowKey]) ?? 0;
+  }
+  return data.isp ?? 0;
+}
+function getISP()        { return ahuComponents.reduce((s, c) => s + getCompISP(c), 0); }
 function getTSP()        { return esp + getISP(); }
 function getBHP()        { return (getTSP() * cfm) / (6356 * 0.65); }
 
@@ -1314,6 +1409,12 @@ function addComponent(key) {
     return;
   }
   const comp = { name: key, size, label: entry.label, data: entry[size] };
+  if (key === 'Heat_Coil') {
+    comp.coilFpm = '500';
+  } else if (key === 'Cool_Coil') {
+    comp.coilFpm = '500';
+    comp.coilRows = '4row';
+  }
   if (tunnelMode === 'dual' && selectedTunnel === 'return') {
     returnComponents.push(comp);
   } else {
@@ -1421,8 +1522,17 @@ function makeVisualComp(comp, index, side) {
   img.onerror = () => { img.src = PLACEHOLDER_IMG; };
 
   const lbl = document.createElement('span');
-  lbl.textContent = `${comp.label}\nSize ${comp.size}`;
   lbl.style.whiteSpace = 'pre-line';
+  if (comp.name === 'Heat_Coil' || comp.name === 'Cool_Coil') {
+    const fpmLabel = `${comp.coilFpm || '500'} fpm`;
+    const rowLabel = comp.name === 'Cool_Coil' ? ` / ${comp.coilRows || '4row'}` : '';
+    lbl.textContent = `${comp.label}\nSize ${comp.size}\n${fpmLabel}${rowLabel}`;
+    div.title = 'Click to change coil options';
+    div.style.cursor = 'pointer';
+    div.addEventListener('click', e => { e.stopPropagation(); showCoilPopup(e, comp, index, side); });
+  } else {
+    lbl.textContent = `${comp.label}\nSize ${comp.size}`;
+  }
 
   div.appendChild(img);
   div.appendChild(lbl);
@@ -1983,7 +2093,7 @@ function showTspPopup(e) {
 
   addSectionHeader('Supply');
   if (ahuComponents.length) {
-    ahuComponents.forEach(c => addRow(c.label || c.name, c.data.isp));
+    ahuComponents.forEach(c => addRow(c.label || c.name, getCompISP(c)));
   } else {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="2" class="popup-empty">No components</td>`;
@@ -1993,7 +2103,7 @@ function showTspPopup(e) {
   if (tunnelMode === 'dual') {
     addSectionHeader('Return');
     if (returnComponents.length) {
-      returnComponents.forEach(c => addRow(c.label || c.name, c.data.isp));
+      returnComponents.forEach(c => addRow(c.label || c.name, getCompISP(c)));
     } else {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td colspan="2" class="popup-empty">No components</td>`;
@@ -2025,6 +2135,55 @@ document.addEventListener('click', function(e) {
   const popup = document.getElementById('tsp-popup');
   if (popup.classList.contains('open') && !popup.contains(e.target)) {
     closeTspPopup();
+  }
+});
+
+// ── Coil Options Popup ────────────────────────────────────────
+function showCoilPopup(e, comp, index, side) {
+  const popup = document.getElementById('coil-popup');
+
+  // Set FPM radio state
+  popup.querySelectorAll('input[name="coil-fpm"]').forEach(r => {
+    r.checked = (r.value === (comp.coilFpm || '500'));
+    r.onchange = () => {
+      comp.coilFpm = r.value;
+      updateDisplay();
+    };
+  });
+
+  // Show/hide rows section for Cool_Coil
+  const rowsSection = document.getElementById('coil-rows-section');
+  if (comp.name === 'Cool_Coil') {
+    rowsSection.style.display = '';
+    popup.querySelectorAll('input[name="coil-rows"]').forEach(r => {
+      r.checked = (r.value === (comp.coilRows || '4row'));
+      r.onchange = () => {
+        comp.coilRows = r.value;
+        updateDisplay();
+      };
+    });
+  } else {
+    rowsSection.style.display = 'none';
+  }
+
+  // Position below the clicked element
+  const rect = e.currentTarget.getBoundingClientRect();
+  popup.style.visibility = 'hidden';
+  popup.classList.add('open');
+  const popupW = popup.offsetWidth;
+  popup.style.top  = (rect.bottom + 4) + 'px';
+  popup.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - popupW - 8)) + 'px';
+  popup.style.visibility = '';
+}
+
+function closeCoilPopup() {
+  document.getElementById('coil-popup').classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+  const popup = document.getElementById('coil-popup');
+  if (popup.classList.contains('open') && !popup.contains(e.target)) {
+    closeCoilPopup();
   }
 });
 
