@@ -163,8 +163,7 @@
       margin-left: 2px;
     }
 
-    #theme-toggle {
-      margin-left: auto;
+    .header-btn {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -179,8 +178,10 @@
       transition: background 0.15s;
       white-space: nowrap;
     }
-    #theme-toggle:hover { background: var(--toggle-hover); }
-    #theme-toggle .toggle-icon { font-size: 14px; }
+    .header-btn:hover { background: var(--toggle-hover); }
+    .header-btn .btn-icon { font-size: 14px; }
+
+    #export-btn { margin-left: auto; }
 
     /* ── App ────────────────────────────────────────────────── */
     #app {
@@ -1061,8 +1062,17 @@
     <h1>AHU Builder</h1>
     <div class="subtitle">BlueBuffalo Component Selector</div>
   </div>
-  <button id="theme-toggle" onclick="toggleTheme()">
-    <span class="toggle-icon" id="toggle-icon">&#9728;</span>
+  <button id="export-btn" class="header-btn" onclick="exportAHU()" title="Export air handler configuration to JSON file">
+    <span class="btn-icon">&#8595;</span>
+    <span>Export</span>
+  </button>
+  <button class="header-btn" onclick="document.getElementById('import-file-input').click()" title="Import air handler configuration from JSON file">
+    <span class="btn-icon">&#8593;</span>
+    <span>Import</span>
+  </button>
+  <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importAHU(this)">
+  <button id="theme-toggle" class="header-btn" onclick="toggleTheme()">
+    <span class="toggle-icon btn-icon" id="toggle-icon">&#9728;</span>
     <span id="toggle-label">Light Mode</span>
   </button>
 </header>
@@ -2186,6 +2196,59 @@ document.addEventListener('click', function(e) {
     closeCoilPopup();
   }
 });
+
+// ── Export / Import ───────────────────────────────────────────
+function exportAHU() {
+  const payload = {
+    version: 1,
+    cfm,
+    esp,
+    tunnelMode,
+    ahuComponents,
+    returnComponents
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'air-handler.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importAHU(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.ahuComponents || !Array.isArray(data.ahuComponents)) {
+        alert('Invalid AHU file.');
+        return;
+      }
+      // Restore state
+      ahuComponents    = data.ahuComponents    || [];
+      returnComponents = data.returnComponents || [];
+      cfm = data.cfm || 0;
+      esp = data.esp || 0;
+      // Update inputs
+      document.getElementById('cfm-entry').value = cfm || '';
+      document.getElementById('esp-entry').value = esp || '';
+      // Restore tunnel mode
+      tunnelMode = data.tunnelMode === 'dual' ? 'dual' : 'single';
+      document.getElementById('tunnel-select').value = tunnelMode;
+      if (tunnelMode === 'single') returnComponents = [];
+      selectedTunnel = 'supply';
+      updateDisplay();
+    } catch {
+      alert('Could not read AHU file. Make sure it is a valid JSON export.');
+    }
+  };
+  reader.readAsText(file);
+  // Reset input so the same file can be re-imported if needed
+  input.value = '';
+}
 
 // ── Theme Toggle ──────────────────────────────────────────────
 function toggleTheme() {
